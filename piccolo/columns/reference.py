@@ -1,6 +1,3 @@
-"""
-Dataclasses for storing lazy references between ForeignKey columns and tables.
-"""
 
 from __future__ import annotations
 
@@ -16,24 +13,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class LazyTableReference:
-    """
-    Holds a reference to a :class:`Table <piccolo.table.Table>` subclass. Used
-    to avoid circular dependencies in the ``references`` argument of
-    :class:`ForeignKey <piccolo.columns.column_types.ForeignKey>` columns.
-
-    :param table_class_name:
-        The name of the ``Table`` subclass. For example, ``'Manager'``.
-    :param app_name:
-        If specified, the ``Table`` subclass is imported from a Piccolo app
-        with the given name.
-    :param module_path:
-        If specified, the ``Table`` subclass is imported from this path.
-        For example, ``'my_app.tables'``.
-
-        .. hint::
-            If the table is in the same file, you can pass in ``__name__``.
-
-    """
 
     table_class_name: str
     app_name: Optional[str] = None
@@ -94,21 +73,10 @@ class LazyColumnReferenceStore:
     foreign_key_columns: list[ForeignKey] = field(default_factory=list)
 
     def for_table(self, table: type[Table]) -> list[ForeignKey]:
-        return [
-            i
-            for i in self.foreign_key_columns
-            if isinstance(i._foreign_key_meta.references, LazyTableReference)
-            and i._foreign_key_meta.references.resolve() is table
-        ]
+        pass
 
     def for_tablename(self, tablename: str) -> list[ForeignKey]:
-        return [
-            i
-            for i in self.foreign_key_columns
-            if isinstance(i._foreign_key_meta.references, LazyTableReference)
-            and i._foreign_key_meta.references.resolve()._meta.tablename
-            == tablename
-        ]
+        pass
 
 
 LAZY_COLUMN_REFERENCES: LazyColumnReferenceStore = LazyColumnReferenceStore()

@@ -23,10 +23,10 @@ class set_env_var:
         self.temp_value = temp_value
 
     def set_var(self, value: str):
-        os.environ[self.var_name] = value
+        pass
 
     def get_var(self) -> Optional[str]:
-        return os.environ.get(self.var_name)
+        pass
 
     def __enter__(self):
         self.existing_value = self.get_var()
@@ -53,8 +53,6 @@ def run_pytest(pytest_args: list[str]) -> int:  # pragma: no cover
 
 def refresh_db():
     for table_class in TABLE_REGISTRY:
-        # In case any table classes were imported before we set the
-        # environment variable.
         table_class._meta.refresh_db()
 
 

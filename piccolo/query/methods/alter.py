@@ -34,7 +34,7 @@ class RenameTable(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        return f"RENAME TO {self.new_name}"
+        pass
 
 
 @dataclass
@@ -46,7 +46,7 @@ class RenameConstraint(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        return f"RENAME CONSTRAINT {self.old_name} TO {self.new_name}"
+        pass
 
 
 @dataclass
@@ -57,12 +57,7 @@ class AlterColumnStatement(AlterStatement):
 
     @property
     def column_name(self) -> str:
-        if isinstance(self.column, str):
-            return self.column
-        elif isinstance(self.column, Column):
-            return self.column._meta.db_column_name
-        else:
-            raise ValueError("Unrecognised column type")
+        pass
 
 
 @dataclass
@@ -73,14 +68,14 @@ class RenameColumn(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        return f'RENAME COLUMN "{self.column_name}" TO "{self.new_name}"'
+        pass
 
 
 @dataclass
 class DropColumn(AlterColumnStatement):
     @property
     def ddl(self) -> str:
-        return f'DROP COLUMN "{self.column_name}"'
+        pass
 
 
 @dataclass
@@ -92,26 +87,18 @@ class AddColumn(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        self.column._meta.name = self.name
-        return f"ADD COLUMN {self.column.ddl}"
+        pass
 
 
 @dataclass
 class DropDefault(AlterColumnStatement):
     @property
     def ddl(self) -> str:
-        return f'ALTER COLUMN "{self.column_name}" DROP DEFAULT'
+        pass
 
 
 @dataclass
 class SetColumnType(AlterStatement):
-    """
-    :param using_expression:
-        Postgres can't automatically convert between certain column types. You
-        can tell Postgres which action to take. For example
-        `my_column_name::integer`.
-
-    """
 
     old_column: Column
     new_column: Column
@@ -119,16 +106,7 @@ class SetColumnType(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        if self.new_column._meta._table is None:
-            self.new_column._meta._table = self.old_column._meta.table
-
-        column_name = self.old_column._meta.db_column_name
-        query = (
-            f'ALTER COLUMN "{column_name}" TYPE {self.new_column.column_type}'
-        )
-        if self.using_expression is not None:
-            query += f" USING {self.using_expression}"
-        return query
+        pass
 
 
 @dataclass
@@ -140,8 +118,7 @@ class SetDefault(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        sql_value = self.column.get_sql_value(self.value)
-        return f'ALTER COLUMN "{self.column_name}" SET DEFAULT {sql_value}'
+        pass
 
 
 @dataclass
@@ -152,17 +129,7 @@ class SetUnique(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        if self.boolean:
-            return f'ADD UNIQUE ("{self.column_name}")'
-        if isinstance(self.column, str):
-            raise ValueError(
-                "Removing a unique constraint requires a Column instance "
-                "to be passed as the column arg instead of a string."
-            )
-        tablename = self.column._meta.table._meta.tablename
-        column_name = self.column_name
-        key = f"{tablename}_{column_name}_key"
-        return f'DROP CONSTRAINT "{key}"'
+        pass
 
 
 @dataclass
@@ -173,10 +140,7 @@ class SetNull(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        if self.boolean:
-            return f'ALTER COLUMN "{self.column_name}" DROP NOT NULL'
-        else:
-            return f'ALTER COLUMN "{self.column_name}" SET NOT NULL'
+        pass
 
 
 @dataclass
@@ -187,7 +151,7 @@ class SetLength(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        return f'ALTER COLUMN "{self.column_name}" TYPE VARCHAR({self.length})'
+        pass
 
 
 @dataclass
@@ -198,7 +162,7 @@ class DropConstraint(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        return f"DROP CONSTRAINT IF EXISTS {self.constraint_name}"
+        pass
 
 
 @dataclass
@@ -221,16 +185,7 @@ class AddForeignKeyConstraint(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        query = (
-            f'ADD CONSTRAINT "{self.constraint_name}" FOREIGN KEY '
-            f'("{self.foreign_key_column_name}") REFERENCES '
-            f'"{self.referenced_table_name}" ("{self.referenced_column_name}")'
-        )
-        if self.on_delete:
-            query += f" ON DELETE {self.on_delete.value}"
-        if self.on_update:
-            query += f" ON UPDATE {self.on_update.value}"
-        return query
+        pass
 
 
 @dataclass
@@ -242,15 +197,7 @@ class SetDigits(AlterColumnStatement):
 
     @property
     def ddl(self) -> str:
-        if self.digits is None:
-            return f'ALTER COLUMN "{self.column_name}" TYPE {self.column_type}'
-
-        precision = self.digits[0]
-        scale = self.digits[1]
-        return (
-            f'ALTER COLUMN "{self.column_name}" TYPE '
-            f"{self.column_type}({precision}, {scale})"
-        )
+        pass
 
 
 @dataclass
@@ -261,7 +208,7 @@ class SetSchema(AlterStatement):
 
     @property
     def ddl(self) -> str:
-        return f'SET SCHEMA "{self.schema_name}"'
+        pass
 
 
 @dataclass
@@ -272,17 +219,7 @@ class DropTable:
 
     @property
     def ddl(self) -> str:
-        query = "DROP TABLE"
-
-        if self.if_exists:
-            query += " IF EXISTS"
-
-        query += f" {self.table._meta.get_formatted_tablename()}"
-
-        if self.cascade:
-            query += " CASCADE"
-
-        return query
+        pass
 
 
 class Alter(DDL):
@@ -384,27 +321,11 @@ class Alter(DDL):
             >>> await Band.alter().rename_table('musical_group')
 
         """
-        # We override the existing one rather than appending.
         self._rename_table = [RenameTable(new_name=new_name)]
         return self
 
     def rename_constraint(self, old_name: str, new_name: str) -> Alter:
-        """
-        Rename a constraint on the table::
-
-            >>> await Band.alter().rename_constraint(
-            ...     'old_constraint_name',
-            ...     'new_constraint_name',
-            ... )
-
-        """
-        self._rename_constraint = [
-            RenameConstraint(
-                old_name=old_name,
-                new_name=new_name,
-            )
-        ]
-        return self
+        pass
 
     def rename_column(
         self, column: Union[str, Column], new_name: str
@@ -533,11 +454,7 @@ class Alter(DDL):
     def drop_foreign_key_constraint(
         self, column: Union[str, ForeignKey]
     ) -> Alter:
-        constraint_name = self._get_constraint_name(column=column)
-        self._drop_constraint.append(
-            DropConstraint(constraint_name=constraint_name)
-        )
-        return self
+        pass
 
     def add_foreign_key_constraint(
         self,
@@ -613,52 +530,11 @@ class Alter(DDL):
         return self
 
     def set_schema(self, schema_name: str) -> Alter:
-        """
-        Move the table to a different schema.
-
-        :param schema_name:
-            The schema to move the table to.
-
-        """
-        self._set_schema.append(SetSchema(schema_name=schema_name))
-        return self
+        pass
 
     @property
     def default_ddl(self) -> Sequence[str]:
-        if self._drop_table is not None:
-            return [self._drop_table.ddl]
-
-        query = f"ALTER TABLE {self.table._meta.get_formatted_tablename()}"
-
-        alterations = [
-            i.ddl
-            for i in itertools.chain(
-                self._add,
-                self._add_foreign_key_constraint,
-                self._rename_columns,
-                self._rename_table,
-                self._rename_constraint,
-                self._drop,
-                self._drop_constraint,
-                self._drop_default,
-                self._set_column_type,
-                self._set_unique,
-                self._set_null,
-                self._set_length,
-                self._set_default,
-                self._set_digits,
-                self._set_schema,
-            )
-        ]
-
-        if self.engine_type == "sqlite":
-            # Can only perform one alter statement at a time.
-            return [f"{query} {i}" for i in alterations]
-
-        # Postgres can perform them all at once:
-        query += ",".join(f" {i}" for i in alterations)
-
-        return [query]
+        pass
 
 
 Self = TypeVar("Self", bound=Alter)

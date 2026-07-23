@@ -27,50 +27,20 @@ class CreateIndex(DDL):
 
     @property
     def column_names(self) -> list[str]:
-        return [
-            i._meta.db_column_name if isinstance(i, Column) else i
-            for i in self.columns
-        ]
+        pass
 
     @property
     def prefix(self) -> str:
-        prefix = "CREATE INDEX"
-        if self.if_not_exists:
-            prefix += " IF NOT EXISTS"
-        return prefix
+        pass
 
     @property
     def postgres_ddl(self) -> Sequence[str]:
-        column_names = self.column_names
-        index_name = self.table._get_index_name(column_names)
-        tablename = self.table._meta.get_formatted_tablename()
-        method_name = self.method.value
-        column_names_str = ", ".join([f'"{i}"' for i in self.column_names])
-        return [
-            (
-                f"{self.prefix} {index_name} ON {tablename} USING "
-                f"{method_name} ({column_names_str})"
-            )
-        ]
+        pass
 
     @property
     def cockroach_ddl(self) -> Sequence[str]:
-        return self.postgres_ddl
+        pass
 
     @property
     def sqlite_ddl(self) -> Sequence[str]:
-        column_names = self.column_names
-        index_name = self.table._get_index_name(column_names)
-        tablename = self.table._meta.get_formatted_tablename()
-
-        method_name = self.method.value
-        if method_name != "btree":
-            raise ValueError("SQLite only support btree indexes.")
-
-        column_names_str = ", ".join([f'"{i}"' for i in self.column_names])
-        return [
-            (
-                f"{self.prefix} {index_name} ON {tablename} "
-                f"({column_names_str})"
-            )
-        ]
+        pass

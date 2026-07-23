@@ -54,25 +54,7 @@ class Delete(Query):
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        query = f"DELETE FROM {self.table._meta.get_formatted_tablename()}"
-
-        querystring = QueryString(query)
-
-        if self.where_delegate._where:
-            querystring = QueryString(
-                "{} WHERE {}",
-                querystring,
-                self.where_delegate._where.querystring_for_update_and_delete,
-            )
-
-        if self.returning_delegate._returning:
-            querystring = QueryString(
-                "{}{}",
-                querystring,
-                self.returning_delegate._returning.querystring,
-            )
-
-        return [querystring]
+        pass
 
 
 Self = TypeVar("Self", bound=Delete)

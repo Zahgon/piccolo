@@ -40,8 +40,6 @@ class Insert(
         self.on_conflict_delegate = OnConflictDelegate()
         self.add(*instances)
 
-    ###########################################################################
-    # Clauses
 
     def add(self: Self, *instances: Table) -> Self:
         self.add_delegate.add(*instances, table_class=self.table)
@@ -86,7 +84,6 @@ class Insert(
         )
         return self
 
-    ###########################################################################
 
     def _raw_response_callback(self, results: list):
         """
@@ -105,48 +102,7 @@ class Insert(
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        base = f"INSERT INTO {self.table._meta.get_formatted_tablename()}"
-        columns = ",".join(
-            f'"{i._meta.db_column_name}"' for i in self.table._meta.columns
-        )
-        values = ",".join("{}" for _ in self.add_delegate._add)
-        query = f"{base} ({columns}) VALUES {values}"
-        querystring = QueryString(
-            query,
-            *[i.querystring for i in self.add_delegate._add],
-            query_type="insert",
-            table=self.table,
-        )
-
-        engine_type = self.engine_type
-
-        on_conflict = self.on_conflict_delegate._on_conflict
-        if on_conflict.on_conflict_items:
-            querystring = QueryString(
-                "{}{}",
-                querystring,
-                on_conflict.querystring,
-                query_type="insert",
-                table=self.table,
-            )
-
-        if engine_type in ("postgres", "cockroach") or (
-            engine_type == "sqlite"
-            and self.table._meta.db.get_version_sync() >= 3.35
-        ):
-            returning = self.returning_delegate._returning
-            if returning:
-                return [
-                    QueryString(
-                        "{}{}",
-                        querystring,
-                        returning.querystring,
-                        query_type="insert",
-                        table=self.table,
-                    )
-                ]
-
-        return [querystring]
+        pass
 
 
 Self = TypeVar("Self", bound=Insert)

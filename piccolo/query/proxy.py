@@ -40,8 +40,7 @@ class Proxy(Generic[QueryType, ResponseType]):
         return self.run().__await__()
 
     def freeze(self):
-        self.query.freeze()
-        return FrozenQuery(query=self)
+        pass
 
     def __getattr__(self, name: str):
         """
@@ -51,15 +50,9 @@ class Proxy(Generic[QueryType, ResponseType]):
         attr = getattr(self.query, name)
 
         if inspect.ismethod(attr):
-            # We do this to preserve the fluent interface.
 
             def proxy(*args, **kwargs):
-                response = attr(*args, **kwargs)
-                if isinstance(response, self.query.__class__):
-                    self.query = response
-                    return self
-                else:
-                    return response
+                pass
 
             return proxy
         else:

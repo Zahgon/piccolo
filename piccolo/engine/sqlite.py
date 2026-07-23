@@ -36,96 +36,40 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from piccolo.table import Table
 
-###############################################################################
-
-# We need to register some adapters so sqlite returns types which are more
-# consistent with the Postgres engine.
 
 
-# In
+
 
 
 def convert_numeric_in(value: Decimal) -> float:
-    """
-    Convert any Decimal values into floats.
-    """
-    return float(value)
+    pass
 
 
 def convert_uuid_in(value: uuid.UUID) -> str:
-    """
-    Converts the UUID value being passed into sqlite.
-    """
-    return str(value)
+    pass
 
 
 def convert_time_in(value: datetime.time) -> str:
-    """
-    Converts the time value being passed into sqlite.
-    """
-    return value.isoformat()
+    pass
 
 
 def convert_date_in(value: datetime.date) -> str:
-    """
-    Converts the date value being passed into sqlite.
-    """
-    return value.isoformat()
+    pass
 
 
 def convert_datetime_in(value: datetime.datetime) -> str:
-    """
-    Converts the datetime into a string. If it's timezone aware, we want to
-    convert it to UTC first. This is to replicate Postgres, which stores
-    timezone aware datetimes in UTC.
-    """
-    if value.tzinfo is not None:
-        value = value.astimezone(datetime.timezone.utc)
-    return str(value)
+    pass
 
 
 def convert_timedelta_in(value: datetime.timedelta) -> float:
-    """
-    Converts the timedelta value being passed into sqlite.
-    """
-    return value.total_seconds()
+    pass
 
 
 def convert_array_in(value: list) -> str:
-    """
-    Converts a list value into a string (it handles nested lists, and type like
-    dateime/ time / date which aren't usually JSON serialisable.).
-
-    """
-
-    def serialise(data: list):
-        output = []
-
-        for item in data:
-            if isinstance(item, list):
-                output.append(serialise(item))
-            elif isinstance(
-                item,
-                (datetime.datetime, datetime.time, datetime.date, Decimal),
-            ):
-                if adapter := ADAPTERS.get(type(item)):
-                    output.append(adapter(item))
-                else:
-                    raise ValueError("The adapter wasn't found.")
-            elif item is None or isinstance(item, (str, int, float, list)):
-                # We can safely JSON serialise these.
-                output.append(item)
-            else:
-                raise ValueError("We can't currently serialise this value.")
-
-        return output
-
-    return dump_json(serialise(value))
+    pass
 
 
-###############################################################################
 
-# Register adapters
 
 ADAPTERS: dict[type, Callable[[Any], Any]] = {
     Decimal: convert_numeric_in,
@@ -140,158 +84,72 @@ ADAPTERS: dict[type, Callable[[Any], Any]] = {
 for value_type, adapter in ADAPTERS.items():
     sqlite3.register_adapter(value_type, adapter)
 
-###############################################################################
 
-# Out
 
 
 def decode_to_string(converter: Callable[[str], Any]):
-    """
-    This means we can use our converters with string and bytes. They are
-    passed bytes when used directly via SQLite, and are passed strings when
-    used by the array converters.
-    """
-
-    @wraps(converter)
-    def wrapper(value: Union[str, bytes]) -> Any:
-        if isinstance(value, bytes):
-            return converter(value.decode("utf8"))
-        elif isinstance(value, str):
-            return converter(value)
-        else:
-            raise ValueError("Unsupported type")
-
-    return wrapper
+    pass
 
 
 @decode_to_string
 def convert_numeric_out(value: str) -> Decimal:
-    """
-    Convert float values into Decimals.
-    """
-    return Decimal(value)
+    pass
 
 
 @decode_to_string
 def convert_int_out(value: str) -> int:
-    """
-    Make sure INTEGER values are actually of type ``int``.
-
-    SQLite doesn't enforce that the values in INTEGER columns are actually
-    integers - they could be strings ('hello'), or floats (1.0).
-
-    There's not much we can do if the value is something like 'hello' - a
-    ``ValueError`` is appropriate in this situation.
-
-    For a value like ``1.0``, it seems reasonable to handle this, and return a
-    value of ``1``.
-
-    """
-    # We used to use int(float(value)), but it was incorrect, because float has
-    # limited precision for large numbers.
-    return int(Decimal(value))
+    pass
 
 
 @decode_to_string
 def convert_uuid_out(value: str) -> uuid.UUID:
-    """
-    If the value is a uuid, convert it to a UUID instance.
-    """
-    return uuid.UUID(value)
+    pass
 
 
 @decode_to_string
 def convert_date_out(value: str) -> datetime.date:
-    return datetime.date.fromisoformat(value)
+    pass
 
 
 @decode_to_string
 def convert_time_out(value: str) -> datetime.time:
-    """
-    If the value is a time, convert it to a UUID instance.
-    """
-    return datetime.time.fromisoformat(value)
+    pass
 
 
 @decode_to_string
 def convert_seconds_out(value: str) -> datetime.timedelta:
-    """
-    If the value is from a seconds column, convert it to a timedelta instance.
-    """
-    return datetime.timedelta(seconds=float(value))
+    pass
 
 
 @decode_to_string
 def convert_boolean_out(value: str) -> bool:
-    """
-    If the value is from a boolean column, convert it to a bool value.
-    """
-    return value == "1"
+    pass
 
 
 @decode_to_string
 def convert_timestamp_out(value: str) -> datetime.datetime:
-    """
-    If the value is from a timestamp column, convert it to a datetime value.
-    """
-    return datetime.datetime.fromisoformat(value)
+    pass
 
 
 @decode_to_string
 def convert_timestamptz_out(value: str) -> datetime.datetime:
-    """
-    If the value is from a timestamptz column, convert it to a datetime value,
-    with a timezone of UTC.
-    """
-    return datetime.datetime.fromisoformat(value).replace(
-        tzinfo=datetime.timezone.utc
-    )
+    pass
 
 
 @decode_to_string
 def convert_array_out(value: str) -> list:
-    """
-    If the value if from an array column, deserialise the string back into a
-    list.
-    """
-    return load_json(value)
+    pass
 
 
 def convert_complex_array_out(value: bytes, converter: Callable):
-    """
-    This is used to handle arrays of things like timestamps, which we can't
-    just load from JSON without doing additional work to convert the elements
-    back into Python objects.
-    """
-    parsed = load_json(value.decode("utf8"))
-
-    def convert_list(list_value: list):
-        output = []
-
-        for value in list_value:
-            if isinstance(value, list):
-                # For nested arrays
-                output.append(convert_list(value))
-            elif isinstance(value, str):
-                output.append(converter(value))
-            else:
-                output.append(value)
-
-        return output
-
-    if isinstance(parsed, list):
-        return convert_list(parsed)
-    else:
-        return parsed
+    pass
 
 
 @decode_to_string
 def convert_M2M_out(value: str) -> list:
-    return value.split(",")
+    pass
 
 
-###############################################################################
-# Register the basic converters
 
 CONVERTERS = {
     "NUMERIC": convert_numeric_out,
@@ -309,15 +167,9 @@ CONVERTERS = {
 for column_name, converter in CONVERTERS.items():
     sqlite3.register_converter(column_name, converter)
 
-###############################################################################
-# Register the array converters
 
-# The ARRAY column type handles values which can be easily serialised to and
-# from JSON.
 sqlite3.register_converter("ARRAY", convert_array_out)
 
-# We have special column types for arrays of timestamps etc, as simply loading
-# the JSON isn't sufficient.
 for column_name in ("TIMESTAMP", "TIMESTAMPTZ", "DATE", "TIME", "NUMERIC"):
     sqlite3.register_converter(
         f"ARRAY_{column_name}",
@@ -327,7 +179,6 @@ for column_name in ("TIMESTAMP", "TIMESTAMPTZ", "DATE", "TIME", "NUMERIC"):
         ),
     )
 
-###############################################################################
 
 
 @dataclass
@@ -336,14 +187,11 @@ class AsyncBatch(BaseBatch):
     query: Query
     batch_size: int
 
-    # Set internally
     _cursor: Optional[Cursor] = None
 
     @property
     def cursor(self) -> Cursor:
-        if not self._cursor:
-            raise ValueError("_cursor not set")
-        return self._cursor
+        pass
 
     async def next(self) -> list[dict]:
         data = await self.cursor.fetchmany(self.batch_size)
@@ -371,14 +219,9 @@ class AsyncBatch(BaseBatch):
         return exception is not None
 
 
-###############################################################################
 
 
 class TransactionType(enum.Enum):
-    """
-    See the `SQLite <https://www.sqlite.org/lang_transaction.html>`_ docs for
-    more info.
-    """
 
     deferred = "DEFERRED"
     immediate = "IMMEDIATE"
@@ -386,16 +229,6 @@ class TransactionType(enum.Enum):
 
 
 class Atomic(BaseAtomic):
-    """
-    Usage:
-
-    transaction = engine.atomic()
-    transaction.add(Foo.create_table())
-
-    # Either:
-    transaction.run_sync()
-    await transaction.run()
-    """
 
     __slots__ = ("engine", "queries", "transaction_type")
 
@@ -435,7 +268,6 @@ class Atomic(BaseAtomic):
         return self.run().__await__()
 
 
-###############################################################################
 
 
 class Savepoint:
@@ -444,30 +276,13 @@ class Savepoint:
         self.transaction = transaction
 
     async def rollback_to(self):
-        validate_savepoint_name(self.name)
-        await self.transaction.connection.execute(
-            f"ROLLBACK TO SAVEPOINT {self.name}"
-        )
+        pass
 
     async def release(self):
-        validate_savepoint_name(self.name)
-        await self.transaction.connection.execute(
-            f"RELEASE SAVEPOINT {self.name}"
-        )
+        pass
 
 
 class SQLiteTransaction(BaseTransaction):
-    """
-    Used for wrapping queries in a transaction, using a context manager.
-    Currently it's async only.
-
-    Usage::
-
-        async with engine.transaction():
-            # Run some queries:
-            await Band.select().run()
-
-    """
 
     __slots__ = (
         "engine",
@@ -526,46 +341,34 @@ class SQLiteTransaction(BaseTransaction):
         return await self.engine.get_connection()
 
     async def begin(self):
-        await self.connection.execute(f"BEGIN {self.transaction_type.value}")
+        pass
 
     async def commit(self):
         await self.connection.execute("COMMIT")
         self._committed = True
 
     async def rollback(self):
-        await self.connection.execute("ROLLBACK")
-        self._rolled_back = True
+        pass
 
     async def rollback_to(self, savepoint_name: str):
-        """
-        Used to rollback to a savepoint just using the name.
-        """
-        await Savepoint(name=savepoint_name, transaction=self).rollback_to()
+        pass
 
-    ###########################################################################
 
     def get_savepoint_id(self) -> int:
-        self._savepoint_id += 1
-        return self._savepoint_id
+        pass
 
     async def savepoint(self, name: Optional[str] = None) -> Savepoint:
-        name = name or f"savepoint_{self.get_savepoint_id()}"
-        validate_savepoint_name(name)
-        await self.connection.execute(f"SAVEPOINT {name}")
-        return Savepoint(name=name, transaction=self)
+        pass
 
-    ###########################################################################
 
     async def __aexit__(self, exception_type, exception, traceback) -> bool:
         if self._parent:
             return exception is None
 
         if exception:
-            # The user may have manually rolled it back.
             if not self._rolled_back:
                 await self.rollback()
         else:
-            # The user may have manually committed it.
             if not self._committed and not self._rolled_back:
                 await self.commit()
 
@@ -575,11 +378,10 @@ class SQLiteTransaction(BaseTransaction):
         return exception is None
 
 
-###############################################################################
 
 
 def dict_factory(cursor, row) -> dict:
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+    pass
 
 
 class SQLiteEngine(Engine[SQLiteTransaction]):
@@ -636,11 +438,11 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
 
     @property
     def path(self):
-        return self.connection_kwargs["database"]
+        pass
 
     @path.setter
     def path(self, value: str):
-        self.connection_kwargs["database"] = value
+        pass
 
     async def get_version(self) -> float:
         return self.get_version_sync()
@@ -652,26 +454,13 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
     async def prep_database(self):
         pass
 
-    ###########################################################################
 
     def remove_db_file(self):
-        """
-        Use with caution - removes the SQLite file. Useful for testing
-        purposes.
-        """
-        if os.path.exists(self.path):
-            os.unlink(self.path)
+        pass
 
     def create_db_file(self):
-        """
-        Create the database file. Useful for testing purposes.
-        """
-        if os.path.exists(self.path):
-            raise Exception(f"Database at {self.path} already exists")
-        with open(self.path, "w"):
-            pass
+        pass
 
-    ###########################################################################
 
     async def batch(
         self, query: Query, batch_size: int = 100, node: Optional[str] = None
@@ -690,7 +479,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
             connection=connection, query=query, batch_size=batch_size
         )
 
-    ###########################################################################
 
     async def get_connection(self) -> Connection:
         connection = await aiosqlite.connect(**self.connection_kwargs)
@@ -698,7 +486,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
         await connection.execute("PRAGMA foreign_keys = 1")
         return connection
 
-    ###########################################################################
 
     async def _get_inserted_pk(self, cursor, table: type[Table]) -> Any:
         """
@@ -730,8 +517,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
                 await connection.commit()
 
                 if query_type == "insert" and self.get_version_sync() < 3.35:
-                    # We can't use the RETURNING clause on older versions
-                    # of SQLite.
                     assert table is not None
                     pk = await self._get_inserted_pk(cursor, table)
                     return [{table._meta.primary_key._meta.db_column_name: pk}]
@@ -758,8 +543,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
             response = await cursor.fetchall()
 
             if query_type == "insert" and self.get_version_sync() < 3.35:
-                # We can't use the RETURNING clause on older versions
-                # of SQLite.
                 assert table is not None
                 pk = await self._get_inserted_pk(cursor, table)
                 return [{table._meta.primary_key._meta.db_column_name: pk}]
@@ -782,7 +565,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
             engine_type=self.engine_type
         )
 
-        # If running inside a transaction:
         current_transaction = self.current_transaction.get()
         if current_transaction:
             response = await self._run_in_existing_connection(
@@ -815,7 +597,6 @@ class SQLiteEngine(Engine[SQLiteTransaction]):
         if self.log_queries:
             self.print_query(query_id=query_id, query=ddl)
 
-        # If running inside a transaction:
         current_transaction = self.current_transaction.get()
         if current_transaction:
             response = await self._run_in_existing_connection(

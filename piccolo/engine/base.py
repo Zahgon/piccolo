@@ -18,8 +18,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 logger = logging.getLogger(__name__)
-# This is a set to speed up lookups from O(n) when
-# using str vs O(1) when using set[str]
 VALID_SAVEPOINT_CHARACTERS: Final[set[str]] = set(
     string.ascii_letters + string.digits + "-" + "_"
 )
@@ -152,28 +150,7 @@ class Engine(Generic[TransactionClass], metaclass=ABCMeta):
         pass
 
     async def check_version(self):
-        """
-        Warn if the database version isn't supported.
-        """
-        try:
-            version_number = await self.get_version()
-        except Exception as exception:
-            colored_warning(
-                f"Unable to fetch server version: {exception}",
-                level=Level.high,
-            )
-            return
-
-        engine_type = self.engine_type.capitalize()
-        logger.info(f"Running {engine_type} version {version_number}")
-        if version_number and (version_number < self.min_version_number):
-            message = (
-                f"This version of {self.engine_type} isn't supported "
-                f"(< {self.min_version_number}) - some features might not be "
-                "available. For instructions on installing databases, see the "
-                "Piccolo docs."
-            )
-            colored_warning(message, stacklevel=3)
+        pass
 
     def _connection_pool_warning(self):
         message = (
@@ -194,7 +171,6 @@ class Engine(Generic[TransactionClass], metaclass=ABCMeta):
         """
         self._connection_pool_warning()
 
-    ###########################################################################
 
     current_transaction: contextvars.ContextVar[Optional[TransactionClass]]
 
@@ -211,8 +187,6 @@ class Engine(Generic[TransactionClass], metaclass=ABCMeta):
         """
         return self.current_transaction.get() is not None
 
-    ###########################################################################
-    # Logging queries and responses
 
     def get_query_id(self) -> int:
         self.query_id += 1

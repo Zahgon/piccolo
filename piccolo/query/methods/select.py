@@ -45,7 +45,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from piccolo.custom_types import Combinable
     from piccolo.table import Table  # noqa
 
-# Here to avoid breaking changes - will be removed in the future.
 from piccolo.query.functions.aggregate import (  # noqa: F401
     Avg,
     Count,
@@ -56,21 +55,6 @@ from piccolo.query.functions.aggregate import (  # noqa: F401
 
 
 class SelectRaw(QueryString):
-    """
-    Here for backwards compatibility - just use
-    :class:`piccolo.querystring.QueryString` directly.
-
-    Execute raw SQL in your select query.
-
-    .. code-block:: python
-
-        >>> await Band.select(
-        ...     Band.name,
-        ...     SelectRaw("log(popularity) AS log_popularity")
-        ... )
-        [{'name': 'Pythonistas', 'log_popularity': 3.0}]
-
-    """
 
     pass
 
@@ -79,9 +63,6 @@ OptionalDict = Optional[dict[str, Any]]
 
 
 class First(Proxy["Select", OptionalDict]):
-    """
-    This is for static typing purposes.
-    """
 
     def __init__(self, query: Select):
         self.query = query
@@ -103,9 +84,6 @@ class First(Proxy["Select", OptionalDict]):
 
 
 class SelectList(Proxy["Select", list]):
-    """
-    This is for static typing purposes.
-    """
 
     async def run(
         self,
@@ -131,9 +109,6 @@ class SelectList(Proxy["Select", list]):
 
 
 class SelectJSON(Proxy["Select", str]):
-    """
-    This is for static typing purposes.
-    """
 
     async def run(
         self,
@@ -195,37 +170,15 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
         return self
 
     def distinct(self: Self, *, on: Optional[Sequence[Column]] = None) -> Self:
-        if on is not None and self.engine_type == "sqlite":
-            raise NotImplementedError("SQLite doesn't support DISTINCT ON")
-
-        self.distinct_delegate.distinct(enabled=True, on=on)
-        return self
+        pass
 
     def group_by(
         self: Self, *columns: Union[Column, str, QueryString]
     ) -> Self:
-        """
-        :param columns:
-            Either a :class:`piccolo.columns.base.Column` instance, a string
-            representing a column name, or
-            :class:`piccolo.querystring.QueryString` for grouping by a raw SQL
-            expression or select alias.
-        """
-        _columns: list[Union[Column, QueryString]] = []
-        for column in columns:
-            if isinstance(column, str):
-                _columns.append(self.table._meta.get_column_by_name(column))
-            else:
-                _columns.append(column)
-        self.group_by_delegate.group_by(*_columns)
-        return self
+        pass
 
     def as_of(self: Self, interval: str = "-1s") -> Self:
-        if self.engine_type != "cockroach":
-            raise NotImplementedError("Only CockroachDB supports AS OF")
-
-        self.as_of_delegate.as_of(interval)
-        return self
+        pass
 
     def limit(self: Self, number: int) -> Self:
         self.limit_delegate.limit(number)
@@ -254,10 +207,7 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
         skip_locked: bool = False,
         of: tuple[type[Table], ...] = (),
     ) -> Self:
-        self.lock_rows_delegate.lock_rows(
-            lock_strength, nowait, skip_locked, of
-        )
-        return self
+        pass
 
     async def _splice_m2m_rows(
         self,
@@ -314,8 +264,6 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
             secondary_table_pk = secondary_table._meta.primary_key
 
             if self.engine_type == "sqlite":
-                # With M2M queries in SQLite, we always get the value back as a
-                # list of strings, so we need to do some type conversion.
                 value_type = (
                     m2m_select.columns[0].__class__.value_type
                     if m2m_select.as_list and m2m_select.serialisation_safe
@@ -335,10 +283,6 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
                         f"{m2m_name} relation"
                     )
 
-                # If the user requested a single column, we just return that
-                # from the database. Otherwise we request the primary key
-                # value, so we can fetch the rest of the data in a subsequent
-                # SQL query - see below.
                 if m2m_select.as_list:
                     if m2m_select.serialisation_safe:
                         pass
@@ -372,8 +316,6 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
 
             elif self.engine_type in ("postgres", "cockroach"):
                 if m2m_select.as_list:
-                    # We get the data back as an array, and can just return it
-                    # unless it's JSON.
                     if (
                         type(m2m_select.columns[0]) in (JSON, JSONB)
                         and m2m_select.load_json
@@ -382,16 +324,10 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
                             data = row[m2m_name]
                             row[m2m_name] = [load_json(i) for i in data]
                 elif m2m_select.serialisation_safe:
-                    # If the columns requested can be safely serialised, they
-                    # are returned as a JSON string, so we need to deserialise
-                    # it.
                     for row in response:
                         data = row[m2m_name]
                         row[m2m_name] = load_json(data) if data else []
                 else:
-                    # If the data can't be safely serialised as JSON, we get
-                    # back an array of primary key values, and need to
-                    # splice in the correct values using Python.
                     response = await self._splice_m2m_rows(
                         response,
                         secondary_table,
@@ -400,10 +336,7 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
                         m2m_select,
                     )
 
-        #######################################################################
 
-        # If no columns were specified, it's a select *, so we know that
-        # no columns were selected from related tables.
         was_select_star = len(self.columns_delegate.selected_columns) == 0
 
         if self.output_delegate._output.nested and not was_select_star:
@@ -479,16 +412,14 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
         *,
         on: CallbackType = CallbackType.success,
     ) -> Self:
-        self.callback_delegate.callback(callbacks, on=on)
-        return self
+        pass
 
     def where(self: Self, *where: Union[Combinable, QueryString]) -> Self:
         self.where_delegate.where(*where)
         return self
 
     def having(self: Self, *where: Union[Combinable, QueryString]) -> Self:
-        self.having_delegate.where(*where)
-        return self
+        pass
 
     async def batch(
         self,
@@ -502,188 +433,16 @@ class Select(Query[TableInstance, list[dict[str, Any]]]):
             kwargs.update(node=node)
         return await self.table._meta.db.batch(self, **kwargs)
 
-    ###########################################################################
 
     def _get_joins(self, columns: Sequence[Selectable]) -> list[str]:
-        """
-        A call chain is a sequence of foreign keys representing joins which
-        need to be made to retrieve a column in another table.
-        """
-        joins: list[str] = []
-
-        readables: list[Readable] = [
-            i for i in columns if isinstance(i, Readable)
-        ]
-
-        columns = list(columns)
-        for readable in readables:
-            columns += readable.columns
-
-        querystrings: list[QueryString] = [
-            i for i in columns if isinstance(i, QueryString)
-        ]
-        for querystring in querystrings:
-            if querystring_columns := getattr(querystring, "columns", []):
-                columns += querystring_columns
-
-        for column in columns:
-            if not isinstance(column, Column):
-                continue
-
-            _joins: list[str] = []
-            for index, key in enumerate(column._meta.call_chain, 0):
-                table_alias = key.table_alias
-
-                if index > 0:
-                    left_tablename = column._meta.call_chain[
-                        index - 1
-                    ].table_alias
-                else:
-                    left_tablename = (
-                        key._meta.table._meta.get_formatted_tablename()
-                    )  # noqa: E501
-
-                right_tablename = (
-                    key._foreign_key_meta.resolved_references._meta.get_formatted_tablename()  # noqa: E501
-                )
-
-                pk_name = column._meta.call_chain[
-                    index
-                ]._foreign_key_meta.resolved_target_column._meta.name
-
-                _joins.append(
-                    f'LEFT JOIN {right_tablename} "{table_alias}"'
-                    " ON "
-                    f'({left_tablename}."{key._meta.db_column_name}" = "{table_alias}"."{pk_name}")'  # noqa: E501
-                )
-
-            joins.extend(_joins)
-
-        # Remove duplicates
-        return list(OrderedDict.fromkeys(joins))
+        pass
 
     def _check_valid_call_chain(self, keys: Sequence[Selectable]) -> bool:
-        for column in keys:
-            if not isinstance(column, Column):
-                continue
-            if column._meta.call_chain and len(column._meta.call_chain) > 10:
-                # Make sure the call_chain isn't too large to discourage
-                # very inefficient queries.
-                raise Exception(
-                    "Joining more than 10 tables isn't supported - "
-                    "please restructure your query."
-                )
-        return True
+        pass
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        # JOIN
-        self._check_valid_call_chain(self.columns_delegate.selected_columns)
-
-        select_joins = self._get_joins(self.columns_delegate.selected_columns)
-        where_joins = self._get_joins(self.where_delegate.get_where_columns())
-        having_joins = self._get_joins(
-            self.having_delegate.get_where_columns()
-        )
-        order_by_joins = self._get_joins(
-            self.order_by_delegate.get_order_by_columns()
-        )
-
-        # Combine all joins, and remove duplicates
-        joins: list[str] = list(
-            OrderedDict.fromkeys(
-                select_joins + where_joins + having_joins + order_by_joins
-            )
-        )
-
-        #######################################################################
-
-        # If no columns have been specified for selection, select all columns
-        # on the table:
-        if len(self.columns_delegate.selected_columns) == 0:
-            self.columns_delegate.selected_columns = self.table._meta.columns
-
-        # If secret fields need to be omitted, remove them from the list.
-        if self.exclude_secrets:
-            self.columns_delegate.remove_secret_columns()
-
-        engine_type = self.table._meta.db.engine_type
-
-        select_strings: list[QueryString] = [
-            c.get_select_string(engine_type=engine_type)
-            for c in self.columns_delegate.selected_columns
-        ]
-
-        #######################################################################
-
-        args: list[Any] = []
-
-        query = "SELECT"
-
-        distinct = self.distinct_delegate._distinct
-        if distinct.on:
-            distinct.validate_on(self.order_by_delegate._order_by)
-        query += "{}"
-        args.append(distinct.querystring)
-
-        columns_str = ", ".join("{}" for _ in select_strings)
-        query += f" {columns_str} FROM {self.table._meta.get_formatted_tablename()}"  # noqa: E501
-        args.extend(select_strings)
-
-        for join in joins:
-            query += f" {join}"
-
-        if self.as_of_delegate._as_of:
-            query += "{}"
-            args.append(self.as_of_delegate._as_of.querystring)
-
-        if self.where_delegate._where:
-            query += " WHERE {}"
-            args.append(self.where_delegate._where.querystring)
-
-        if self.group_by_delegate._group_by:
-            query += "{}"
-            args.append(self.group_by_delegate._group_by.querystring)
-
-        if self.having_delegate._where:
-            query += " HAVING {}"
-            args.append(self.having_delegate._where.querystring)
-
-        if self.order_by_delegate._order_by.order_by_items:
-            query += "{}"
-            args.append(self.order_by_delegate._order_by.querystring)
-
-        if (
-            engine_type == "sqlite"
-            and self.offset_delegate._offset
-            and not self.limit_delegate._limit
-        ):
-            raise ValueError(
-                "A limit clause must be provided when doing an offset with "
-                "SQLite."
-            )
-
-        if self.limit_delegate._limit:
-            query += "{}"
-            args.append(self.limit_delegate._limit.querystring)
-
-        if self.offset_delegate._offset:
-            query += "{}"
-            args.append(self.offset_delegate._offset.querystring)
-
-        if self.lock_rows_delegate._lock_rows:
-            if engine_type == "sqlite":
-                raise NotImplementedError(
-                    "SQLite doesn't support row locking e.g. SELECT ... FOR "
-                    "UPDATE"
-                )
-
-            query += "{}"
-            args.append(self.lock_rows_delegate._lock_rows.querystring)
-
-        querystring = QueryString(query, *args)
-
-        return [querystring]
+        pass
 
     async def run(
         self,

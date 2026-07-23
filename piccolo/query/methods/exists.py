@@ -22,18 +22,11 @@ class Exists(Query[TableInstance, bool]):
         return self
 
     async def response_handler(self, response) -> bool:
-        # Convert to a bool - postgres returns True, and sqlite return 1.
         return bool(response[0]["exists"])
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        select = Select(table=self.table)
-        select.where_delegate._where = self.where_delegate._where
-        return [
-            QueryString(
-                'SELECT EXISTS({}) AS "exists"', select.querystrings[0]
-            )
-        ]
+        pass
 
 
 Self = TypeVar("Self", bound=Exists)

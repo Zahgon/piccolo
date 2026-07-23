@@ -16,49 +16,35 @@ class TimeOffset(Default):
 
     @property
     def postgres(self):
-        interval_string = self.get_postgres_interval_string(
-            ["hours", "minutes", "seconds"]
-        )
-        return f"CURRENT_TIME + INTERVAL '{interval_string}'"
+        pass
 
     @property
     def cockroach(self):
-        interval_string = self.get_postgres_interval_string(
-            ["hours", "minutes", "seconds"]
-        )
-        return f"CURRENT_TIME::TIMESTAMP + INTERVAL '{interval_string}'"
+        pass
 
     @property
     def sqlite(self):
-        interval_string = self.get_sqlite_interval_string(
-            ["hours", "minutes", "seconds"]
-        )
-        return f"(time(CURRENT_TIME, {interval_string}))"
+        pass
 
     def python(self):
-        return (
-            datetime.datetime.now()
-            + datetime.timedelta(
-                hours=self.hours, minutes=self.minutes, seconds=self.seconds
-            )
-        ).time
+        pass
 
 
 class TimeNow(Default):
     @property
     def postgres(self):
-        return "CURRENT_TIME"
+        pass
 
     @property
     def cockroach(self):
-        return "CURRENT_TIME::TIMESTAMP"
+        pass
 
     @property
     def sqlite(self):
-        return "CURRENT_TIME"
+        pass
 
     def python(self):
-        return datetime.datetime.now().time()
+        pass
 
 
 class TimeCustom(Default):
@@ -70,24 +56,22 @@ class TimeCustom(Default):
 
     @property
     def postgres(self):
-        return f"'{self.time.isoformat()}'"
+        pass
 
     @property
     def cockroach(self):
-        return f"'{self.time.isoformat()}'::TIMESTAMP"
+        pass
 
     @property
     def sqlite(self):
-        return f"'{self.time.isoformat()}'"
+        pass
 
     def python(self):
-        return self.time
+        pass
 
     @classmethod
     def from_time(cls, instance: datetime.time):
-        return cls(
-            hour=instance.hour, minute=instance.minute, second=instance.second
-        )
+        pass
 
 
 TimeArg = Union[

@@ -22,40 +22,10 @@ class Default(ABC):
         pass
 
     def get_postgres_interval_string(self, attributes: list[str]) -> str:
-        """
-        Returns a string usable as an interval argument in Postgres e.g.
-        "1 day 2 hour".
-
-        :param attributes:
-            Date / time attributes to extract from the instance. e.g.
-            ['hours', 'minutes']
-
-        """
-        interval_components = []
-        for attr_name in attributes:
-            attr = getattr(self, attr_name, None)
-            if attr is not None:
-                interval_components.append(f"{attr} {attr_name}")
-
-        return " ".join(interval_components)
+        pass
 
     def get_sqlite_interval_string(self, attributes: list[str]) -> str:
-        """
-        Returns a string usable as an interval argument in SQLite e.g.
-        "'-2 hours', '1 days'".
-
-        :param attributes:
-            Date / time attributes to extract from the instance. e.g.
-            ['hours', 'minutes']
-
-        """
-        interval_components = []
-        for attr_name in attributes:
-            attr = getattr(self, attr_name, None)
-            if attr is not None:
-                interval_components.append(f"'{attr} {attr_name}'")
-
-        return ", ".join(interval_components)
+        pass
 
     def __repr__(self):
         return repr_class_instance(self)

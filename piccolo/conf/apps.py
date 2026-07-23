@@ -37,12 +37,7 @@ class PiccoloAppModule(ModuleType):
 
 
 def get_package(name: str) -> str:
-    """
-    :param name:
-        The __name__ variable from a Python file.
-
-    """
-    return ".".join(name.split(".")[:-1])
+    pass
 
 
 def table_finder(
@@ -92,8 +87,6 @@ def table_finder(
     if exclude_tags is None:
         exclude_tags = []
     if isinstance(modules, str):
-        # Guard against the user just entering a string, for example
-        # 'blog.tables', instead of ['blog.tables'].
         modules = [modules]
 
     table_subclasses: list[type[Table]] = []
@@ -142,15 +135,6 @@ def table_finder(
 
 @dataclass
 class Command:
-    """
-    :param callable:
-        The function or method to be called.
-    :param command_name:
-        If not specified, the name of the ``callable`` is used.
-    :param aliases:
-        Alternative ways to refer to this command in the CLI.
-
-    """
 
     callable: Callable
     command_name: Optional[str] = None
@@ -159,27 +143,6 @@ class Command:
 
 @dataclass
 class AppConfig:
-    """
-    Each app needs an AppConfig, which is defined in piccolo_app.py.
-
-    :param app_name:
-        The name of the app, for example ``'article'``.
-    :param migrations_folder_path:
-        The path of the folder containing this app's migration files.
-    :param table_classes:
-        By registering table classes, Piccolo's auto migrations can detect
-        changes to tables.
-    :param migration_dependencies:
-        A list of Piccolo apps whose migrations this app depends on. For
-        example: ``['piccolo.apps.user.piccolo_conf']``. The migrations for
-        those apps will be run before the migrations for this app.
-    :param commands:
-        A list of functions and coroutines, which are then registered with
-        the Piccolo CLI. For example, with a Piccolo app called ``'article'``,
-        and a command called ``new``, it can be called on the command line
-        using ``piccolo article new``.
-
-    """
 
     app_name: str
     migrations_folder_path: Union[str, pathlib.Path]
@@ -189,11 +152,7 @@ class AppConfig:
 
     @property
     def resolved_migrations_folder_path(self) -> str:
-        return (
-            str(self.migrations_folder_path)
-            if isinstance(self.migrations_folder_path, pathlib.Path)
-            else self.migrations_folder_path
-        )
+        pass
 
     def __post_init__(self) -> None:
         self._migration_dependency_app_configs: Optional[list[AppConfig]] = (
@@ -201,8 +160,7 @@ class AppConfig:
         )
 
     def register_table(self, table_class: type[Table]):
-        self.table_classes.append(table_class)
-        return table_class
+        pass
 
     def get_commands(self) -> list[Command]:
         return [
@@ -211,22 +169,7 @@ class AppConfig:
 
     @property
     def migration_dependency_app_configs(self) -> list[AppConfig]:
-        """
-        Get all of the ``AppConfig`` instances from this app's migration
-        dependencies.
-        """
-        # We cache the value so it's more efficient, and also so we can set the
-        # underlying value in unit tests for easier mocking.
-        if self._migration_dependency_app_configs is None:
-            modules: list[PiccoloAppModule] = [
-                cast(PiccoloAppModule, import_module(module_path))
-                for module_path in self.migration_dependencies
-            ]
-            self._migration_dependency_app_configs = [
-                i.APP_CONFIG for i in modules
-            ]
-
-        return self._migration_dependency_app_configs
+        pass
 
     def get_table_with_name(self, table_class_name: str) -> type[Table]:
         """
@@ -246,14 +189,6 @@ class AppConfig:
 
 
 class AppRegistry:
-    """
-    Records all of the Piccolo apps in your project. Kept in
-    ``piccolo_conf.py``.
-
-    :param apps:
-        A list of paths to Piccolo apps, e.g. ``['blog.piccolo_app']``.
-
-    """
 
     def __init__(self, apps: Optional[list[str]] = None):
         self.apps = apps or []
@@ -282,37 +217,13 @@ class AppRegistry:
 
     @staticmethod
     def _validate_app_names(app_names: list[str]):
-        """
-        Raise a ValueError if an app_name is repeated.
-        """
-        app_names.sort()
-        grouped = itertools.groupby(app_names)
-        for key, value in grouped:
-            count = len(list(value))
-            if count > 1:
-                raise ValueError(
-                    f"There are {count} apps with the name `{key}`. This can "
-                    "cause unexpected behavior. Make sure each app has a "
-                    "unique name, and you haven't registered the same app "
-                    "multiple times."
-                )
+        pass
 
     def get_app_config(self, app_name: str) -> Optional[AppConfig]:
         return self.app_configs.get(app_name)
 
     def get_table_classes(self, app_name: str) -> list[type[Table]]:
-        """
-        Returns each Table subclass defined in the given app if it exists.
-        Otherwise raises a ValueError.
-
-        :raises ValueError:
-            If an AppConfig can't be found for the given app_name.
-
-        """
-        app_config = self.get_app_config(app_name=app_name)
-        if not app_config:
-            raise ValueError(f"Unrecognised app_name: {app_name}")
-        return app_config.table_classes
+        pass
 
     def get_table_with_name(
         self, app_name: str, table_class_name: str
@@ -341,10 +252,6 @@ ENGINE_VAR = "DB"
 
 
 class Finder:
-    """
-    Contains useful methods for locating and loading apps within your project,
-    and tables within apps.
-    """
 
     def __init__(self, diagnose: bool = False):
         """
@@ -361,7 +268,6 @@ class Finder:
         """
         Remove all duplicates - just leaving the first instance.
         """
-        # Deduplicate, but preserve order - which is why set() isn't used.
         return list({c: None for c in config_modules}.keys())
 
     def _import_app_modules(
@@ -440,15 +346,7 @@ class Finder:
             return module
 
     def get_piccolo_conf_path(self) -> str:
-        piccolo_conf_module = self.get_piccolo_conf_module()
-
-        if piccolo_conf_module is None:
-            raise ModuleNotFoundError("piccolo_conf.py not found.")
-
-        module_file_path = piccolo_conf_module.__file__
-        assert module_file_path
-
-        return module_file_path
+        pass
 
     def get_app_registry(self) -> AppRegistry:
         """
@@ -485,7 +383,6 @@ class Finder:
         app_registry = self.get_app_registry()
         app_modules = self._import_app_modules(app_registry.apps)
 
-        # Now deduplicate any dependencies
         app_modules = self._deduplicate(app_modules)
 
         return app_modules
@@ -574,31 +471,9 @@ class Finder:
         include_apps: Optional[list[str]] = None,
         exclude_apps: Optional[list[str]] = None,
     ) -> list[type[Table]]:
-        """
-        Returns all ``Table`` classes registered with the given apps. If
-        ``include_apps`` is ``None``, then ``Table`` classes will be returned
-        for all apps.
-        """
-        if include_apps and exclude_apps:
-            raise ValueError("Only specify `include_apps` or `exclude_apps`.")
-
-        if include_apps:
-            app_names = include_apps
-        else:
-            app_names = self.get_app_names()
-            if exclude_apps:
-                app_names = [i for i in app_names if i not in exclude_apps]
-
-        tables: list[type[Table]] = []
-
-        for app_name in app_names:
-            app_config = self.get_app_config(app_name=app_name)
-            tables.extend(app_config.table_classes)
-
-        return tables
+        pass
 
 
-###############################################################################
 
 
 class PiccoloConfUpdater:

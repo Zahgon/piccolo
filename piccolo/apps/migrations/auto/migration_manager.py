@@ -64,7 +64,7 @@ class AddColumnCollection:
 
     @property
     def table_class_names(self) -> list[str]:
-        return list({i.table_class_name for i in self.add_columns})
+        pass
 
 
 @dataclass
@@ -83,7 +83,7 @@ class DropColumnCollection:
 
     @property
     def table_class_names(self) -> list[str]:
-        return list({i.table_class_name for i in self.drop_columns})
+        pass
 
 
 @dataclass
@@ -104,7 +104,7 @@ class RenameColumnCollection:
 
     @property
     def table_class_names(self) -> list[str]:
-        return list({i.table_class_name for i in self.rename_columns})
+        pass
 
 
 @dataclass
@@ -123,7 +123,7 @@ class AlterColumnCollection:
 
     @property
     def table_class_names(self) -> list[str]:
-        return list({i.table_class_name for i in self.alter_columns})
+        pass
 
 
 AsyncFunction = Callable[[], Coroutine]
@@ -139,18 +139,6 @@ class SkippedTransaction:
 
 @dataclass
 class MigrationManager:
-    """
-    Each auto generated migration returns a MigrationManager. It contains
-    all of the schema changes that migration wants to make.
-
-    :param wrap_in_transaction:
-        By default, the migration is wrapped in a transaction, so if anything
-        fails, the whole migration will get rolled back. You can disable this
-        behaviour if you want - for example, in a manual migration you might
-        want to create the transaction yourself (perhaps you're using
-        savepoints), or you may want multiple transactions.
-
-    """
 
     migration_id: str = ""
     app_name: str = ""
@@ -214,14 +202,7 @@ class MigrationManager:
         new_schema: Optional[str] = None,
         old_schema: Optional[str] = None,
     ):
-        self.change_table_schemas.append(
-            ChangeTableSchema(
-                class_name=class_name,
-                tablename=tablename,
-                new_schema=new_schema,
-                old_schema=old_schema,
-            )
-        )
+        pass
 
     def rename_table(
         self,
@@ -367,13 +348,8 @@ class MigrationManager:
         self.raw.append(raw)
 
     def add_raw_backwards(self, raw: Union[Callable, AsyncFunction]):
-        """
-        When reversing a migration, you may want to run extra code to help
-        clean up.
-        """
-        self.raw_backwards.append(raw)
+        pass
 
-    ###########################################################################
 
     async def get_table_from_snapshot(
         self,
@@ -407,7 +383,6 @@ class MigrationManager:
         )
         return diffable_table.to_table_class()
 
-    ###########################################################################
 
     @staticmethod
     async def _print_query(query: Union[DDL, Query, SchemaDDLBase]):
@@ -456,9 +431,7 @@ class MigrationManager:
                     else alter_column.old_params
                 )
 
-                ###############################################################
 
-                # Change the column type if possible
                 column_class = (
                     alter_column.old_column_class
                     if backwards
@@ -490,15 +463,8 @@ class MigrationManager:
 
                         using_expression: Optional[str] = None
 
-                        # Postgres won't automatically cast some types to
-                        # others. We may as well try, as it will definitely
-                        # fail otherwise.
                         if new_column.value_type != old_column.value_type:
                             if old_params.get("default", ...) is not None:
-                                # Unless the column's default value is also
-                                # something which can be cast to the new type,
-                                # it will also fail. Drop the default value for
-                                # now - the proper default is set later on.
                                 await self._run_query(
                                     _Table.alter().drop_default(old_column)
                                 )
@@ -508,9 +474,6 @@ class MigrationManager:
                                 new_column.column_type,
                             )
 
-                        # We can't migrate a SERIAL to a BIGSERIAL or vice
-                        # versa, as SERIAL isn't a true type, just an alias to
-                        # other commands.
                         if issubclass(column_class, Serial) and issubclass(
                             old_column_class, Serial
                         ):
@@ -527,7 +490,6 @@ class MigrationManager:
                                 )
                             )
 
-                ###############################################################
 
                 on_delete = params.get("on_delete")
                 on_update = params.get("on_update")
@@ -543,7 +505,6 @@ class MigrationManager:
 
                     assert isinstance(fk_column, ForeignKey)
 
-                    # First drop the existing foreign key constraint
                     constraint_name = await get_fk_constraint_name(
                         column=fk_column
                     )
@@ -554,7 +515,6 @@ class MigrationManager:
                             )
                         )
 
-                    # Then add a new foreign key constraint
                     await self._run_query(
                         _Table.alter().add_foreign_key_constraint(
                             column=fk_column,
@@ -581,8 +541,6 @@ class MigrationManager:
 
                 unique = params.get("unique")
                 if unique is not None:
-                    # When modifying unique constraints, we need to pass in
-                    # a column type, and not just the column name.
                     column = Column()
                     column._meta._table = _Table
                     column._meta._name = alter_column.column_name
@@ -597,9 +555,6 @@ class MigrationManager:
                 index_method = params.get("index_method")
                 if index is None:
                     if index_method is not None:
-                        # If the index value hasn't changed, but the
-                        # index_method value has, this indicates we need
-                        # to change the index type.
                         column = Column()
                         column._meta._table = _Table
                         column._meta._name = alter_column.column_name
@@ -615,8 +570,6 @@ class MigrationManager:
                             )
                         )
                 else:
-                    # If the index value has changed, then we are either
-                    # dropping, or creating an index.
                     column = Column()
                     column._meta._table = _Table
                     column._meta._name = alter_column.column_name
@@ -634,7 +587,6 @@ class MigrationManager:
                     else:
                         await self._run_query(_Table.drop_index([column]))
 
-                # None is a valid value, so retrieve ellipsis if not found.
                 default = params.get("default", ...)
                 if default is not ...:
                     column = Column()
@@ -654,7 +606,6 @@ class MigrationManager:
                             )
                         )
 
-                # None is a valid value, so retrieve ellipsis if not found.
                 digits = params.get("digits", ...)
                 if digits is not ...:
                     await self._run_query(
@@ -801,7 +752,6 @@ class MigrationManager:
             )
             table_classes.append(_Table)
 
-        # Sort by foreign key, so they're created in the right order.
         sorted_table_classes = sort_table_classes(table_classes)
 
         if backwards:
@@ -820,8 +770,6 @@ class MigrationManager:
                 if add_column.table_class_name in [
                     i.class_name for i in self.add_tables
                 ]:
-                    # Don't reverse the add column as the table is going to
-                    # be deleted.
                     continue
 
                 _Table = create_table_class(
@@ -844,26 +792,12 @@ class MigrationManager:
                     self.add_columns.for_table_class_name(table_class_name)
                 )
 
-                ###############################################################
-                # Define the table, with the columns, so the metaclass
-                # sets up the columns correctly.
 
                 table_class_members = {
                     add_column.column._meta.name: add_column.column
                     for add_column in add_columns
                 }
 
-                # There's an extreme edge case, when we're adding a foreign
-                # key which references its own table, for example:
-                #
-                #   fk = ForeignKey('self')
-                #
-                # And that table has a custom primary key, for example:
-                #
-                #   id = UUID(primary_key=True)
-                #
-                # In this situation, we need to know the primary key of the
-                # table in order to correctly add this new foreign key.
                 for add_column in add_columns:
                     if (
                         isinstance(add_column.column, ForeignKey)
@@ -901,11 +835,8 @@ class MigrationManager:
                     class_members=table_class_members,
                 )
 
-                ###############################################################
 
                 for add_column in add_columns:
-                    # We fetch the column from the Table, as the metaclass
-                    # copies and sets it up properly.
                     column = _Table._meta.get_column_by_name(
                         add_column.column._meta.name
                     )
@@ -927,9 +858,6 @@ class MigrationManager:
 
         for change_table_schema in self.change_table_schemas:
             if backwards:
-                # Note, we don't try dropping any schemas we may have created.
-                # It's dangerous to do so, just in case the user manually
-                # added tables etc to the schema, and we delete them.
 
                 if (
                     change_table_schema.old_schema
@@ -987,7 +915,6 @@ class MigrationManager:
             else SkippedTransaction()
         ) as transaction:
             if isinstance(transaction, CockroachTransaction):
-                # To enable DDL rollbacks in CockroachDB.
                 await transaction.autocommit_before_ddl(enabled=False)
 
             if not self.preview:
@@ -1009,9 +936,6 @@ class MigrationManager:
             await self._run_drop_columns(backwards=backwards)
             await self._run_drop_tables(backwards=backwards)
             await self._run_rename_columns(backwards=backwards)
-            # We can remove this for cockroach when resolved.
-            # https://github.com/cockroachdb/cockroach/issues/49351
-            # "ALTER COLUMN TYPE is not supported inside a transaction"
             if engine.engine_type != "cockroach":
                 await self._run_alter_columns(backwards=backwards)
 

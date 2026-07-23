@@ -21,9 +21,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class M2MSelect(Selectable):
-    """
-    This is a subquery used within a select to fetch data via an M2M table.
-    """
 
     def __init__(
         self,
@@ -49,8 +46,6 @@ class M2MSelect(Selectable):
 
         safe_types = (int, str)
 
-        # If the columns can be serialised / deserialised as JSON, then we
-        # can fetch the data all in one go.
         self.serialisation_safe = all(
             (column.__class__.value_type in safe_types)
             and (type(column) not in (JSON, JSONB))
@@ -60,86 +55,7 @@ class M2MSelect(Selectable):
     def get_select_string(
         self, engine_type: str, with_alias=True
     ) -> QueryString:
-        m2m_table_name_with_schema = (
-            self.m2m._meta.resolved_joining_table._meta.get_formatted_tablename()  # noqa: E501
-        )  # noqa: E501
-        m2m_relationship_name = self.m2m._meta.name
-
-        fk_1 = self.m2m._meta.primary_foreign_key
-        fk_1_name = fk_1._meta.db_column_name
-        table_1 = fk_1._foreign_key_meta.resolved_references
-        table_1_name = table_1._meta.tablename
-        table_1_name_with_schema = table_1._meta.get_formatted_tablename()
-        table_1_pk_name = table_1._meta.primary_key._meta.db_column_name
-
-        fk_2 = self.m2m._meta.secondary_foreign_key
-        fk_2_name = fk_2._meta.db_column_name
-        table_2 = fk_2._foreign_key_meta.resolved_references
-        table_2_name = table_2._meta.tablename
-        table_2_name_with_schema = table_2._meta.get_formatted_tablename()
-        table_2_pk_name = table_2._meta.primary_key._meta.db_column_name
-
-        inner_select = f"""
-            {m2m_table_name_with_schema}
-            JOIN {table_1_name_with_schema} "inner_{table_1_name}" ON (
-                {m2m_table_name_with_schema}."{fk_1_name}" = "inner_{table_1_name}"."{table_1_pk_name}"
-            )
-            JOIN {table_2_name_with_schema} "inner_{table_2_name}" ON (
-                {m2m_table_name_with_schema}."{fk_2_name}" = "inner_{table_2_name}"."{table_2_pk_name}"
-            )
-            WHERE {m2m_table_name_with_schema}."{fk_1_name}" = "{table_1_name}"."{table_1_pk_name}"
-        """  # noqa: E501
-
-        if engine_type in ("postgres", "cockroach"):
-            if self.as_list:
-                column_name = self.columns[0]._meta.db_column_name
-                return QueryString(f"""
-                    ARRAY(
-                        SELECT
-                            "inner_{table_2_name}"."{column_name}"
-                        FROM {inner_select}
-                    ) AS "{m2m_relationship_name}"
-                """)
-            elif not self.serialisation_safe:
-                column_name = table_2_pk_name
-                return QueryString(f"""
-                    ARRAY(
-                        SELECT
-                            "inner_{table_2_name}"."{column_name}"
-                        FROM {inner_select}
-                    ) AS "{m2m_relationship_name}"
-                """)
-            else:
-                column_names = ", ".join(
-                    f'"inner_{table_2_name}"."{column._meta.db_column_name}"'
-                    for column in self.columns
-                )
-                return QueryString(f"""
-                    (
-                        SELECT JSON_AGG({m2m_relationship_name}_results)
-                        FROM (
-                            SELECT {column_names} FROM {inner_select}
-                        ) AS "{m2m_relationship_name}_results"
-                    ) AS "{m2m_relationship_name}"
-                """)
-        elif engine_type == "sqlite":
-            if len(self.columns) > 1 or not self.serialisation_safe:
-                column_name = table_2_pk_name
-            else:
-                assert len(self.columns) > 0
-                column_name = self.columns[0]._meta.db_column_name
-
-            return QueryString(f"""
-                (
-                    SELECT group_concat(
-                        "inner_{table_2_name}"."{column_name}"
-                    )
-                    FROM {inner_select}
-                )
-                AS "{m2m_relationship_name} [M2M]"
-            """)
-        else:
-            raise ValueError(f"{engine_type} is an unrecognised engine type")
+        pass
 
 
 @dataclass
@@ -147,17 +63,12 @@ class M2MMeta:
     joining_table: Union[type[Table], LazyTableReference]
     _foreign_key_columns: Optional[list[ForeignKey]] = None
 
-    # Set by the Table Metaclass:
     _name: Optional[str] = None
     _table: Optional[type[Table]] = None
 
     @property
     def name(self) -> str:
-        if not self._name:
-            raise ValueError(
-                "`_name` isn't defined - the Table Metaclass should set it."
-            )
-        return self._name
+        pass
 
     @property
     def table(self) -> type[Table]:
@@ -169,83 +80,27 @@ class M2MMeta:
 
     @property
     def resolved_joining_table(self) -> type[Table]:
-        """
-        Evaluates the ``joining_table`` attribute if it's a
-        ``LazyTableReference``, raising a ``ValueError`` if it fails, otherwise
-        returns a ``Table`` subclass.
-        """
-        from piccolo.table import Table
-
-        if isinstance(self.joining_table, LazyTableReference):
-            return self.joining_table.resolve()
-        elif inspect.isclass(self.joining_table) and issubclass(
-            self.joining_table, Table
-        ):
-            return self.joining_table
-        else:
-            raise ValueError(
-                "The joining_table attribute is neither a Table subclass or a "
-                "LazyTableReference instance."
-            )
+        pass
 
     @property
     def foreign_key_columns(self) -> list[ForeignKey]:
-        if not self._foreign_key_columns:
-            self._foreign_key_columns = (
-                self.resolved_joining_table._meta.foreign_key_columns[:2]
-            )
-        return self._foreign_key_columns
+        pass
 
     @property
     def primary_foreign_key(self) -> ForeignKey:
-        """
-        The joining table has two foreign keys. We need a way to distinguish
-        between them. The primary is the one which points to the table with
-        ``M2M`` defined on it. In this example the primary foreign key is the
-        one which points to ``Band``:
-
-        .. code-block:: python
-
-            class Band(Table):
-                name = Varchar()
-                genres = M2M(
-                    LazyTableReference("GenreToBand", module_path=__name__)
-                )
-
-            class Genre(Table):
-                name = Varchar()
-
-            class GenreToBand(Table):
-                band = ForeignKey(Band)  # primary
-                genre = ForeignKey(Genre)  # secondary
-
-        The secondary foreign key is the one which points to ``Genre``.
-
-        """
-        for fk_column in self.foreign_key_columns:
-            if fk_column._foreign_key_meta.resolved_references == self.table:
-                return fk_column
-
-        raise ValueError("No matching foreign key column found!")
+        pass
 
     @property
     def primary_table(self) -> type[Table]:
-        return self.primary_foreign_key._foreign_key_meta.resolved_references
+        pass
 
     @property
     def secondary_foreign_key(self) -> ForeignKey:
-        """
-        See ``primary_foreign_key``.
-        """
-        for fk_column in self.foreign_key_columns:
-            if fk_column._foreign_key_meta.resolved_references != self.table:
-                return fk_column
-
-        raise ValueError("No matching foreign key column found!")
+        pass
 
     @property
     def secondary_table(self) -> type[Table]:
-        return self.secondary_foreign_key._foreign_key_meta.resolved_references
+        pass
 
 
 @dataclass
@@ -257,10 +112,7 @@ class M2MAddRelated:
 
     @property
     def resolved_extra_column_values(self) -> dict[str, Any]:
-        return {
-            i._meta.name if isinstance(i, Column) else i: j
-            for i, j in self.extra_column_values.items()
-        }
+        pass
 
     async def _run(self):
         rows = self.rows
@@ -362,7 +214,6 @@ class M2MGetRelated:
 
         secondary_table = self.m2m._meta.secondary_table
 
-        # use a subquery to make only one db query
         results = await secondary_table.objects().where(
             secondary_table._meta.primary_key.is_in(
                 joining_table.select(

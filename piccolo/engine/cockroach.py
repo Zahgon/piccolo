@@ -55,10 +55,6 @@ class CockroachTransaction(PostgresTransaction):
 
 
 class CockroachEngine(PostgresEngine):
-    """
-    An extension of
-    :class:`PostgresEngine <piccolo.engine.postgres.PostgresEngine>`.
-    """
 
     def __init__(
         self,

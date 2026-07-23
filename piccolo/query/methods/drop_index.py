@@ -25,15 +25,8 @@ class DropIndex(Query):
 
     @property
     def column_names(self) -> list[str]:
-        return [
-            i._meta.name if isinstance(i, Column) else i for i in self.columns
-        ]
+        pass
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        column_names = self.column_names
-        index_name = self.table._get_index_name(column_names)
-        query = "DROP INDEX"
-        if self.if_exists:
-            query += " IF EXISTS"
-        return [QueryString(f"{query} {index_name}")]
+        pass

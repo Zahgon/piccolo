@@ -41,7 +41,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from piccolo.table import Table
 
 
-###############################################################################
 
 
 class GetOrCreate(
@@ -76,29 +75,17 @@ class GetOrCreate(
 
         data = {**self.defaults}
 
-        # If it's a complex `where`, there can be several column values to
-        # extract e.g. (Band.name == 'Pythonistas') & (Band.popularity == 1000)
         if isinstance(self.where, Where):
             data[self.where.column] = self.where.value
         elif isinstance(self.where, And):
             for column, value in self.where.get_column_values().items():
                 if len(column._meta.call_chain) == 0:
-                    # Make sure we only set the value if the column belongs
-                    # to this table.
                     data[column] = value
 
         instance = self.table_class(_data=data)
 
         await instance.save().run(node=node, in_pool=in_pool)
 
-        # If the user wants us to prefetch related objects, for example:
-        #
-        # await Band.objects(Band.manager).get_or_create(
-        #   (Band.name == 'Pythonistas') & (Band.manager == 1)
-        # )
-        #
-        # Then we need to fetch the related objects.
-        # See https://github.com/piccolo-orm/piccolo/issues/597
         prefetch = self.query.prefetch_delegate.fk_columns
         if prefetch:
             table = instance.__class__
@@ -143,17 +130,6 @@ class First(
 
 
 class Create(Generic[TableInstance]):
-    """
-    This is provided as a simple convenience. Rather than running::
-
-        band = Band(name='Pythonistas')
-        await band.save()
-
-    We can instead do it in a single line::
-
-        band = Band.objects().create(name='Pythonistas')
-
-    """
 
     def __init__(
         self,
@@ -269,7 +245,6 @@ class GetRelated(Generic[ReferencedTable]):
             .run(node=node, in_pool=in_pool)
         )
 
-        # Make sure that some values were returned:
         if data is None or not any(data.values()):
             return None
 
@@ -295,16 +270,11 @@ class GetRelated(Generic[ReferencedTable]):
         return run_sync(self.run(*args, **kwargs))
 
 
-###############################################################################
 
 
 class Objects(
     Query[TableInstance, list[TableInstance]], Generic[TableInstance]
 ):
-    """
-    Almost identical to select, except you have to select all fields, and
-    table instances are returned, rather than just data.
-    """
 
     __slots__ = (
         "nested",
@@ -350,14 +320,10 @@ class Objects(
         *,
         on: CallbackType = CallbackType.success,
     ) -> Self:
-        self.callback_delegate.callback(callbacks, on=on)
-        return self
+        pass
 
     def as_of(self, interval: str = "-1s") -> Objects:
-        if self.engine_type != "cockroach":
-            raise NotImplementedError("Only CockroachDB supports AS OF")
-        self.as_of_delegate.as_of(interval)
-        return self
+        pass
 
     def limit(self: Self, number: int) -> Self:
         self.limit_delegate.limit(number)
@@ -366,8 +332,7 @@ class Objects(
     def prefetch(
         self: Self, *fk_columns: Union[ForeignKey, list[ForeignKey]]
     ) -> Self:
-        self.prefetch_delegate.prefetch(*fk_columns)
-        return self
+        pass
 
     def offset(self: Self, number: int) -> Self:
         self.offset_delegate.offset(number)
@@ -390,7 +355,6 @@ class Objects(
         self.where_delegate.where(*where)
         return self
 
-    ###########################################################################
 
     def first(self) -> First[TableInstance]:
         self.limit_delegate.limit(1)
@@ -411,10 +375,7 @@ class Objects(
         skip_locked: bool = False,
         of: tuple[type[Table], ...] = (),
     ) -> Self:
-        self.lock_rows_delegate.lock_rows(
-            lock_strength, nowait, skip_locked, of
-        )
-        return self
+        pass
 
     def get(self, where: Combinable) -> Get[TableInstance]:
         self.where_delegate.where(where)
@@ -426,16 +387,11 @@ class Objects(
         where: Combinable,
         defaults: Optional[dict[Column, Any]] = None,
     ) -> GetOrCreate[TableInstance]:
-        if defaults is None:
-            defaults = {}
-        return GetOrCreate[TableInstance](
-            query=self, table_class=self.table, where=where, defaults=defaults
-        )
+        pass
 
     def create(self, **columns: Any) -> Create[TableInstance]:
         return Create[TableInstance](table_class=self.table, columns=columns)
 
-    ###########################################################################
 
     async def batch(
         self,
@@ -457,36 +413,8 @@ class Objects(
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        select = Select(table=self.table)
+        pass
 
-        for attr in (
-            "as_of_delegate",
-            "limit_delegate",
-            "where_delegate",
-            "offset_delegate",
-            "output_delegate",
-            "order_by_delegate",
-            "lock_rows_delegate",
-        ):
-            setattr(select, attr, getattr(self, attr))
-
-        if self.prefetch_delegate.fk_columns:
-            select.columns(*self.table.all_columns())
-            for fk in self.prefetch_delegate.fk_columns:
-                if isinstance(fk, ForeignKey):
-                    select.columns(*fk.all_columns())
-                else:
-                    raise ValueError(f"{fk} doesn't seem to be a ForeignKey.")
-
-                # Make sure that all intermediate objects are fully loaded.
-                for parent_fk in fk._meta.call_chain:
-                    select.columns(*parent_fk.all_columns())
-
-            select.output_delegate.output(nested=True)
-
-        return select.querystrings
-
-    ###########################################################################
 
     async def run(
         self,
@@ -497,9 +425,6 @@ class Objects(
         results = await super().run(node=node, in_pool=in_pool)
 
         if use_callbacks:
-            # With callbacks, the user can return any data that they want.
-            # Assume that most of the time they will still return a list of
-            # Table instances.
             modified: list[TableInstance] = (
                 await self.callback_delegate.invoke(
                     results, kind=CallbackType.success

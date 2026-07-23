@@ -41,40 +41,24 @@ class IntervalCustom(Default):
 
     @property
     def postgres(self):
-        value = self.get_postgres_interval_string(
-            attributes=[
-                "weeks",
-                "days",
-                "hours",
-                "minutes",
-                "seconds",
-                "milliseconds",
-                "microseconds",
-            ]
-        )
-        return f"'{value}'"
+        pass
 
     @property
     def cockroach(self):
-        return self.postgres
+        pass
 
     @property
     def sqlite(self):
-        return self.timedelta.total_seconds()
+        pass
 
     def python(self):
-        return self.timedelta
+        pass
 
     @classmethod
     def from_timedelta(cls, instance: datetime.timedelta):
-        return cls(
-            days=instance.days,
-            seconds=instance.seconds,
-            microseconds=instance.microseconds,
-        )
+        pass
 
 
-###############################################################################
 
 IntervalArg = Union[
     IntervalCustom,

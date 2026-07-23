@@ -85,9 +85,6 @@ class Constraint:
 
 @dataclasses.dataclass
 class TableConstraints:
-    """
-    All of the constraints for a certain table in the database.
-    """
 
     tablename: str
     constraints: list[Constraint]
@@ -151,15 +148,12 @@ class Trigger:
 
 @dataclasses.dataclass
 class TableTriggers:
-    """
-    All of the triggers for a certain table in the database.
-    """
 
     tablename: str
     triggers: list[Trigger]
 
     def get_column_triggers(self, column_name: str) -> list[Trigger]:
-        return [i for i in self.triggers if i.column_name == column_name]
+        pass
 
     def get_column_ref_trigger(
         self, column_name: str, references_table: str
@@ -217,9 +211,6 @@ class Index:
 
 @dataclasses.dataclass
 class TableIndexes:
-    """
-    All of the indexes for a certain table in the database.
-    """
 
     tablename: str
     indexes: list[Index]
@@ -237,19 +228,6 @@ class TableIndexes:
 
 @dataclasses.dataclass
 class OutputSchema:
-    """
-    Represents the schema which will be printed out.
-    :param imports:
-        e.g. ["from piccolo.table import Table"]
-    :param warnings:
-        e.g. ["some_table.some_column unrecognised_type"]
-    :param index_warnings:
-        Warnings if column indexes can't be parsed.
-    :param trigger_warnings:
-        Warnings if triggers for certain columns can't be found.
-    :param tables:
-        e.g. ["class MyTable(Table): ..."]
-    """
 
     imports: list[str] = dataclasses.field(default_factory=list)
     warnings: list[str] = dataclasses.field(default_factory=list)
@@ -309,7 +287,6 @@ COLUMN_TYPE_MAP: dict[str, type[Column]] = {
     "uuid": UUID,
 }
 
-# Re-map for Cockroach compatibility.
 COLUMN_TYPE_MAP_COCKROACH: dict[str, type[Column]] = {
     **COLUMN_TYPE_MAP,
     **{"integer": BigInt, "json": JSONB},
@@ -375,7 +352,6 @@ COLUMN_DEFAULT_PARSER: dict[type[Column], Any] = {
     ForeignKey: None,
 }
 
-# Re-map for Cockroach compatibility.
 COLUMN_DEFAULT_PARSER_COCKROACH: dict[type[Column], Any] = {
     **COLUMN_DEFAULT_PARSER,
     BigInt: re.compile(r"^(?P<value>-?\d+)$"),
@@ -390,7 +366,6 @@ def get_column_default(
     else:
         pat = COLUMN_DEFAULT_PARSER.get(column_type)
 
-    # Strip extra, incorrect typing stuff from Cockroach.
     column_default = column_default.split(":::", 1)[0]
 
     if pat is None:
@@ -466,7 +441,6 @@ INDEX_METHOD_MAP: dict[str, IndexMethod] = {
 }
 
 
-# 'Indices' seems old-fashioned and obscure in this context.
 async def get_indexes(  # noqa: E302
     table_class: type[Table], tablename: str, schema_name: str = "public"
 ) -> TableIndexes:
@@ -504,8 +478,6 @@ async def get_fk_triggers(
         Any Table subclass - just used to execute raw queries on the database.
 
     """
-    # TODO - Move this query to `piccolo.query.constraints` or use:
-    # `piccolo.query.constraints.referential_constraints`
     triggers = await table_class.raw(
         (
             "SELECT tc.constraint_name, "
@@ -711,7 +683,6 @@ async def create_table_class_from_db(
                 column_type = Serial
             if column_type == BigInt:
                 column_type = Serial
-                # column_type = BigSerial
 
         if constraints.is_foreign_key(column_name=column_name):
             fk_constraint_table = constraints.get_foreign_key_constraint_name(
@@ -844,9 +815,6 @@ async def get_output_schema(
         )
 
     class Schema(Table, db=engine):
-        """
-        Just used for making raw queries on the db.
-        """
 
         pass
 
@@ -869,7 +837,6 @@ async def get_output_schema(
         *table_coroutines, return_exceptions=True
     )
 
-    # handle exceptions
     exceptions = []
     for obj, tablename in zip(output_schemas, tablenames):
         if isinstance(obj, Exception):
@@ -886,10 +853,8 @@ async def get_output_schema(
             ]
         )
 
-    # Merge all the output schemas to a single OutputSchema object
     output_schema: OutputSchema = sum(output_schemas)  # type: ignore
 
-    # Sort the tables based on their ForeignKeys.
     output_schema.tables = sort_table_classes(
         sorted(output_schema.tables, key=lambda x: x._meta.tablename)
     )
@@ -898,9 +863,6 @@ async def get_output_schema(
     return output_schema
 
 
-# This is currently a beta version, and can be improved. However, having
-# something working is still useful for people migrating large schemas to
-# Piccolo.
 async def generate(schema_name: str = "public"):
     """
     Automatically generates Piccolo Table classes by introspecting the

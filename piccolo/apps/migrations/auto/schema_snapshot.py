@@ -8,15 +8,9 @@ from piccolo.apps.migrations.auto.migration_manager import MigrationManager
 
 @dataclass
 class SchemaSnapshot:
-    """
-    Adds up a sequence of MigrationManagers, and returns a snapshot of what
-    the schema looks like.
-    """
 
-    # In ascending order of date created.
     managers: list[MigrationManager] = field(default_factory=list)
 
-    ###########################################################################
 
     def get_table_from_snapshot(self, table_class_name: str) -> DiffableTable:
         snapshot = self.get_snapshot()
@@ -25,12 +19,10 @@ class SchemaSnapshot:
             raise ValueError(f"No match was found for {table_class_name}")
         return filtered[0]
 
-    ###########################################################################
 
     def get_snapshot(self) -> list[DiffableTable]:
         tables: list[DiffableTable] = []
 
-        # Make sure the managers are sorted correctly:
         sorted_managers = sorted(self.managers, key=lambda x: x.migration_id)
 
         for manager in sorted_managers:
@@ -61,7 +53,6 @@ class SchemaSnapshot:
                 )
                 table.columns.extend(add_columns)
 
-                ###############################################################
 
                 drop_columns = manager.drop_columns.for_table_class_name(
                     table.class_name
@@ -73,7 +64,6 @@ class SchemaSnapshot:
                         if i._meta.name != drop_column.column_name
                     ]
 
-                ###############################################################
 
                 alter_columns = manager.alter_columns.for_table_class_name(
                     table.class_name
@@ -85,8 +75,6 @@ class SchemaSnapshot:
                                 setattr(column._meta, key, value)
                                 column._meta.params.update({key: value})
 
-                            # If the column type has changed, we need to update
-                            # it.
                             if (
                                 alter_column.column_class
                                 != alter_column.old_column_class
@@ -97,7 +85,6 @@ class SchemaSnapshot:
                                 new_column._meta = column._meta
                                 table.columns[index] = new_column
 
-                ###############################################################
 
                 for (
                     rename_column

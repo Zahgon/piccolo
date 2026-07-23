@@ -19,54 +19,36 @@ class TimestampOffset(Default):
 
     @property
     def postgres(self):
-        interval_string = self.get_postgres_interval_string(
-            ["days", "hours", "minutes", "seconds"]
-        )
-        return f"CURRENT_TIMESTAMP + INTERVAL '{interval_string}'"
+        pass
 
     @property
     def cockroach(self):
-        interval_string = self.get_postgres_interval_string(
-            ["days", "hours", "minutes", "seconds"]
-        )
-        return f"CURRENT_TIMESTAMP::TIMESTAMP + INTERVAL '{interval_string}'"
+        pass
 
     @property
     def sqlite(self):
-        interval_string = self.get_sqlite_interval_string(
-            ["days", "hours", "minutes", "seconds"]
-        )
-        return f"(datetime(CURRENT_TIMESTAMP, {interval_string}))"
+        pass
 
     def python(self):
-        return datetime.datetime.now() + datetime.timedelta(
-            days=self.days,
-            hours=self.hours,
-            minutes=self.minutes,
-            seconds=self.seconds,
-        )
+        pass
 
 
 class TimestampNow(Default):
-    """
-    The current timestamp, in the local time of the machine that Python is
-    running on.
-    """
 
     @property
     def postgres(self):
-        return "current_timestamp"
+        pass
 
     @property
     def cockroach(self):
-        return "current_timestamp::TIMESTAMP"
+        pass
 
     @property
     def sqlite(self):
-        return "current_timestamp"
+        pass
 
     def python(self):
-        return datetime.datetime.now()
+        pass
 
 
 class TimestampCustom(Default):
@@ -102,43 +84,30 @@ class TimestampCustom(Default):
 
     @property
     def postgres(self):
-        return "'{}'".format(self.datetime.isoformat().replace("T", " "))
+        pass
 
     @property
     def cockroach(self):
-        return "'{}'::TIMESTAMP".format(
-            self.datetime.isoformat().replace("T", " ")
-        )
+        pass
 
     @property
     def sqlite(self):
-        return "'{}'".format(self.datetime.isoformat().replace("T", " "))
+        pass
 
     def python(self):
-        return self.datetime
+        pass
 
     @classmethod
     def from_datetime(cls, instance: datetime.datetime):  # type: ignore
-        return cls(
-            year=instance.year,
-            month=instance.month,
-            day=instance.day,
-            hour=instance.hour,
-            minute=instance.minute,
-            second=instance.second,
-            microsecond=instance.microsecond,
-        )
+        pass
 
 
-###############################################################################
-# For backwards compatibility:
 
 
 class DatetimeDefault:
     now = TimestampNow()
 
 
-###############################################################################
 
 TimestampArg = Union[
     TimestampCustom,

@@ -12,9 +12,7 @@ if TYPE_CHECKING:
 class JSONQueryString(QueryString):
 
     def clean_value(self, value: Any):
-        if not isinstance(value, (str, QueryString)):
-            value = dump_json(value)
-        return value
+        pass
 
     def __eq__(self, value) -> QueryString:  # type: ignore[override]
         value = self.clean_value(value)
@@ -25,20 +23,13 @@ class JSONQueryString(QueryString):
         return QueryString("{} != {}", self, value)
 
     def eq(self, value) -> QueryString:
-        return self.__eq__(value)
+        pass
 
     def ne(self, value) -> QueryString:
-        return self.__ne__(value)
+        pass
 
 
 class GetChildElement(JSONQueryString):
-    """
-    Allows you to get a child element from a JSON object.
-
-    You can access this via the ``arrow`` function on ``JSON`` and ``JSONB``
-    columns.
-
-    """
 
     def __init__(
         self,
@@ -47,34 +38,12 @@ class GetChildElement(JSONQueryString):
         alias: Optional[str] = None,
     ):
         if isinstance(key, int):
-            # asyncpg only accepts integer keys if we explicitly mark it as an
-            # int.
             key = QueryString("{}::int", key)
 
         super().__init__("{} -> {}", identifier, key, alias=alias)
 
     def arrow(self, key: Union[str, int, QueryString]) -> GetChildElement:
-        """
-        This allows you to drill multiple levels deep into a JSON object if
-        needed.
-
-        For example::
-
-            >>> await RecordingStudio.select(
-            ...     RecordingStudio.name,
-            ...     RecordingStudio.facilities.arrow(
-            ...         "instruments"
-            ...     ).arrow(
-            ...         "drum_kits"
-            ...     ).as_alias("drum_kits")
-            ... ).output(load_json=True)
-            [
-                {'name': 'Abbey Road', 'drum_kits': 2},
-                {'name': 'Electric Lady', 'drum_kits': 3}
-            ]
-
-        """
-        return GetChildElement(identifier=self, key=key, alias=self._alias)
+        pass
 
     def __getitem__(
         self, value: Union[str, int, QueryString]
@@ -83,14 +52,6 @@ class GetChildElement(JSONQueryString):
 
 
 class GetElementFromPath(JSONQueryString):
-    """
-    Allows you to retrieve an element from a JSON object by specifying a path.
-    It can be several levels deep.
-
-    You can access this via the ``from_path`` function on ``JSON`` and
-    ``JSONB`` columns.
-
-    """
 
     def __init__(
         self,

@@ -19,7 +19,6 @@ class CheckMigrationManager(BaseMigrationManager):
         super().__init__()
 
     async def get_migration_statuses(self) -> list[MigrationStatus]:
-        # Make sure the migration table exists, otherwise we'll get an error.
         await self.create_migration_table()
 
         migration_statuses: list[MigrationStatus] = []
@@ -62,12 +61,7 @@ class CheckMigrationManager(BaseMigrationManager):
         return migration_statuses
 
     async def have_ran_count(self) -> int:
-        """
-        :returns:
-            The number of migrations which have been ran.
-        """
-        migration_statuses = await self.get_migration_statuses()
-        return len([i for i in migration_statuses if i.has_ran])
+        pass
 
     async def havent_ran_count(self) -> int:
         """

@@ -36,15 +36,12 @@ class AsyncBatch(BaseBatch):
     query: Query
     batch_size: int
 
-    # Set internally
     _transaction: Optional[Transaction] = None
     _cursor: Optional[Cursor] = None
 
     @property
     def cursor(self) -> Cursor:
-        if not self._cursor:
-            raise ValueError("_cursor not set")
-        return self._cursor
+        pass
 
     @property
     def transaction(self) -> Transaction:
@@ -85,24 +82,9 @@ class AsyncBatch(BaseBatch):
         return exception is not None
 
 
-###############################################################################
 
 
 class Atomic(BaseAtomic):
-    """
-    This is useful if you want to build up a transaction programatically, by
-    adding queries to it.
-
-    Usage::
-
-        transaction = engine.atomic()
-        transaction.add(Foo.create_table())
-
-        # Either:
-        transaction.run_sync()
-        await transaction.run()
-
-    """
 
     __slots__ = ("engine", "queries")
 
@@ -139,7 +121,6 @@ class Atomic(BaseAtomic):
         return self.run().__await__()
 
 
-###############################################################################
 
 
 class Savepoint:
@@ -148,30 +129,13 @@ class Savepoint:
         self.transaction = transaction
 
     async def rollback_to(self):
-        validate_savepoint_name(self.name)
-        await self.transaction.connection.execute(
-            f"ROLLBACK TO SAVEPOINT {self.name}"
-        )
+        pass
 
     async def release(self):
-        validate_savepoint_name(self.name)
-        await self.transaction.connection.execute(
-            f"RELEASE SAVEPOINT {self.name}"
-        )
+        pass
 
 
 class PostgresTransaction(BaseTransaction):
-    """
-    Used for wrapping queries in a transaction, using a context manager.
-    Currently it's async only.
-
-    Usage::
-
-        async with engine.transaction():
-            # Run some queries:
-            await Band.select().run()
-
-    """
 
     __slots__ = (
         "engine",
@@ -233,46 +197,34 @@ class PostgresTransaction(BaseTransaction):
             return await self.engine.get_new_connection()
 
     async def begin(self):
-        await self.transaction.start()
+        pass
 
     async def commit(self):
         await self.transaction.commit()
         self._committed = True
 
     async def rollback(self):
-        await self.transaction.rollback()
-        self._rolled_back = True
+        pass
 
     async def rollback_to(self, savepoint_name: str):
-        """
-        Used to rollback to a savepoint just using the name.
-        """
-        await Savepoint(name=savepoint_name, transaction=self).rollback_to()
+        pass
 
-    ###########################################################################
 
     def get_savepoint_id(self) -> int:
-        self._savepoint_id += 1
-        return self._savepoint_id
+        pass
 
     async def savepoint(self, name: Optional[str] = None) -> Savepoint:
-        name = name or f"savepoint_{self.get_savepoint_id()}"
-        validate_savepoint_name(name)
-        await self.connection.execute(f"SAVEPOINT {name}")
-        return Savepoint(name=name, transaction=self)
+        pass
 
-    ###########################################################################
 
     async def __aexit__(self, exception_type, exception, traceback) -> bool:
         if self._parent:
             return exception is None
 
         if exception:
-            # The user may have manually rolled it back.
             if not self._rolled_back:
                 await self.rollback()
         else:
-            # The user may have manually committed it.
             if not self._committed and not self._rolled_back:
                 await self.commit()
 
@@ -286,67 +238,9 @@ class PostgresTransaction(BaseTransaction):
         return exception is None
 
 
-###############################################################################
 
 
 class PostgresEngine(Engine[PostgresTransaction]):
-    """
-    Used to connect to PostgreSQL.
-
-    :param config:
-        The config dictionary is passed to the underlying database adapter,
-        asyncpg. Common arguments you're likely to need are:
-
-        * host
-        * port
-        * user
-        * password
-        * database
-
-        For example, ``{'host': 'localhost', 'port': 5432}``.
-
-        See the `asyncpg docs <https://magicstack.github.io/asyncpg/current/api/index.html#connection>`_
-        for all available options.
-
-    :param extensions:
-        When the engine starts, it will try and create these extensions
-        in Postgres. If you're using a read only database, set this value to an
-        empty tuple ``()``.
-
-    :param log_queries:
-        If ``True``, all SQL and DDL statements are printed out before being
-        run. Useful for debugging.
-
-    :param log_responses:
-        If ``True``, the raw response from each query is printed out. Useful
-        for debugging.
-
-    :param extra_nodes:
-        If you have additional database nodes (e.g. read replicas) for the
-        server, you can specify them here. It's a mapping of a memorable name
-        to a ``PostgresEngine`` instance. For example::
-
-            DB = PostgresEngine(
-                config={'database': 'main_db'},
-                extra_nodes={
-                    'read_replica_1': PostgresEngine(
-                        config={
-                            'database': 'main_db',
-                            host: 'read_replicate.my_db.com'
-                        },
-                        extensions=()
-                    )
-                }
-            )
-
-        Note how we set ``extensions=()``, because it's a read only database.
-
-        When executing a query, you can specify one of these nodes instead
-        of the main database. For example::
-
-            >>> await MyTable.select().run(node="read_replica_1")
-
-    """  # noqa: E501
 
     __slots__ = (
         "config",
@@ -405,8 +299,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
                 "SHOW server_version"
             )
         except ConnectionRefusedError as exception:
-            # Suppressing the exception, otherwise importing piccolo_conf.py
-            # containing an engine will raise an ImportError.
             colored_warning(f"Unable to connect to database - {exception}")
             return 0.0
         else:
@@ -419,42 +311,15 @@ class PostgresEngine(Engine[PostgresTransaction]):
         return run_sync(self.get_version())
 
     async def prep_database(self):
-        for extension in self.extensions:
-            try:
-                await self._run_in_new_connection(
-                    f'CREATE EXTENSION IF NOT EXISTS "{extension}"',
-                )
-            except asyncpg.exceptions.InsufficientPrivilegeError:
-                colored_warning(
-                    f"=> Unable to create {extension} extension - some "
-                    "functionality may not behave as expected. Make sure "
-                    "your database user has permission to create "
-                    "extensions, or add it manually using "
-                    f'`CREATE EXTENSION "{extension}";`',
-                    level=Level.medium,
-                )
+        pass
 
-    ###########################################################################
-    # These typos existed in the codebase for a while, so leaving these proxy
-    # methods for now to ensure backwards compatibility.
 
     async def start_connnection_pool(self, **kwargs) -> None:
-        colored_warning(
-            "`start_connnection_pool` is a typo - please change it to "
-            "`start_connection_pool`.",
-            category=DeprecationWarning,
-        )
-        return await self.start_connection_pool()
+        pass
 
     async def close_connnection_pool(self, **kwargs) -> None:
-        colored_warning(
-            "`close_connnection_pool` is a typo - please change it to "
-            "`close_connection_pool`.",
-            category=DeprecationWarning,
-        )
-        return await self.close_connection_pool()
+        pass
 
-    ###########################################################################
 
     async def start_connection_pool(self, **kwargs) -> None:
         if self.pool:
@@ -474,7 +339,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
         else:
             colored_warning("No pool is running.")
 
-    ###########################################################################
 
     async def get_new_connection(self) -> Connection:
         """
@@ -482,7 +346,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
         """
         return await asyncpg.connect(**self.config)
 
-    ###########################################################################
 
     async def batch(
         self,
@@ -505,7 +368,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
             connection=connection, query=query, batch_size=batch_size
         )
 
-    ###########################################################################
 
     async def _run_in_pool(
         self, query: str, args: Optional[Sequence[Any]] = None
@@ -548,7 +410,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
         if self.log_queries:
             self.print_query(query_id=query_id, query=querystring.__str__())
 
-        # If running inside a transaction:
         current_transaction = self.current_transaction.get()
         if current_transaction:
             response = await current_transaction.connection.fetch(
@@ -570,7 +431,6 @@ class PostgresEngine(Engine[PostgresTransaction]):
         if self.log_queries:
             self.print_query(query_id=query_id, query=ddl)
 
-        # If running inside a transaction:
         current_transaction = self.current_transaction.get()
         if current_transaction:
             response = await current_transaction.connection.fetch(ddl)

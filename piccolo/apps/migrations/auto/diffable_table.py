@@ -42,14 +42,8 @@ def compare_dicts(
         dict_2_value = dict_2.get(key, ...)
 
         if (
-            # If the value is `...` then it means no value was found.
             (dict_2_value is ...)
-            # We have to compare the types, because if we just use equality
-            # then 1.0 == 1 is True.
-            # See this issue:
-            # https://github.com/piccolo-orm/piccolo/issues/1071
             or (type(value) is not type(dict_2_value))
-            # Finally compare the actual values.
             or (dict_2_value != value)
         ):
             output[key] = value
@@ -72,11 +66,6 @@ class TableDelta:
 
 @dataclass
 class ColumnComparison:
-    """
-    As Column overrides it's `__eq__` method, to allow it to be used in the
-    `where` clause of a query, we need to wrap `Column` if we want to compare
-    them.
-    """
 
     column: Column
 
@@ -94,10 +83,6 @@ class ColumnComparison:
 
 @dataclass
 class DiffableTable:
-    """
-    Represents a Table. When we substract two instances, it returns the
-    changes.
-    """
 
     class_name: str
     tablename: str
@@ -121,11 +106,7 @@ class DiffableTable:
                 "The two tables don't appear to have the same name."
             )
 
-        #######################################################################
 
-        # Because we're using sets here, the order is indeterminate. We sort
-        # them, otherwise it's difficult to write good unit tests if the order
-        # constantly changes.
 
         add_columns = [
             AddColumn(
@@ -161,14 +142,12 @@ class DiffableTable:
             )
         ]
 
-        #######################################################################
 
         alter_columns: list[AlterColumn] = []
 
         for existing_column in value.columns:
             column = self.columns_map.get(existing_column._meta.name)
             if not column:
-                # This is a new column - already captured above.
                 continue
 
             delta = compare_dicts(

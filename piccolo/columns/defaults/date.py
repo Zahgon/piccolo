@@ -9,20 +9,6 @@ from .base import Default
 
 
 class DateOffset(Default):
-    """
-    This makes the default value for a
-    :class:`Date <piccolo.columns.column_types.Date>` column the current date,
-    but offset by a number of days.
-
-    For example, if you wanted the default to be tomorrow, you can specify
-    ``DateOffset(days=1)``:
-
-    .. code-block:: python
-
-        class DiscountCode(Table):
-            expires = Date(default=DateOffset(days=1))
-
-    """
 
     def __init__(self, days: int):
         """
@@ -33,39 +19,35 @@ class DateOffset(Default):
 
     @property
     def postgres(self):
-        interval_string = self.get_postgres_interval_string(["days"])
-        return f"CURRENT_DATE + INTERVAL '{interval_string}'"
+        pass
 
     @property
     def cockroach(self):
-        return self.postgres
+        pass
 
     @property
     def sqlite(self):
-        interval_string = self.get_sqlite_interval_string(["days"])
-        return f"(datetime(CURRENT_TIMESTAMP, {interval_string}))"
+        pass
 
     def python(self):
-        return (
-            datetime.datetime.now() + datetime.timedelta(days=self.days)
-        ).date
+        pass
 
 
 class DateNow(Default):
     @property
     def postgres(self):
-        return "CURRENT_DATE"
+        pass
 
     @property
     def cockroach(self):
-        return self.postgres
+        pass
 
     @property
     def sqlite(self):
-        return "CURRENT_DATE"
+        pass
 
     def python(self):
-        return datetime.datetime.now().date()
+        pass
 
 
 class DateCustom(Default):
@@ -82,27 +64,24 @@ class DateCustom(Default):
 
     @property
     def postgres(self):
-        return f"'{self.date.isoformat()}'"
+        pass
 
     @property
     def cockroach(self):
-        return self.postgres
+        pass
 
     @property
     def sqlite(self):
-        return f"'{self.date.isoformat()}'"
+        pass
 
     def python(self):
-        return self.date
+        pass
 
     @classmethod
     def from_date(cls, instance: datetime.date):
-        return cls(
-            year=instance.year, month=instance.month, day=instance.month
-        )
+        pass
 
 
-# Might add an enum back which encapsulates all of the options.
 DateArg = Union[
     DateOffset,
     DateCustom,

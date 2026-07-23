@@ -52,10 +52,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class OnDelete(str, Enum):
-    """
-    Used by :class:`ForeignKey <piccolo.columns.column_types.ForeignKey>` to
-    specify the behaviour when a related row is deleted.
-    """
 
     cascade = "CASCADE"
     restrict = "RESTRICT"
@@ -71,10 +67,6 @@ class OnDelete(str, Enum):
 
 
 class OnUpdate(str, Enum):
-    """
-    Used by :class:`ForeignKey <piccolo.columns.column_types.ForeignKey>` to
-    specify the behaviour when a related row is updated.
-    """
 
     cascade = "CASCADE"
     restrict = "RESTRICT"
@@ -102,39 +94,11 @@ class ForeignKeyMeta(Generic[ReferencedTable]):
 
     @property
     def resolved_references(self) -> type[Table]:
-        """
-        Evaluates the ``references`` attribute if it's a ``LazyTableReference``,
-        raising a ``ValueError`` if it fails, otherwise returns a ``Table``
-        subclass.
-        """  # noqa: E501
-        from piccolo.table import Table
-
-        if isinstance(self.references, LazyTableReference):
-            return self.references.resolve()
-        elif inspect.isclass(self.references) and issubclass(
-            self.references, Table
-        ):
-            return self.references
-        else:
-            raise ValueError(
-                "The references attribute is neither a Table subclass or a "
-                "LazyTableReference instance."
-            )
+        pass
 
     @property
     def resolved_target_column(self) -> Column:
-        if self.target_column is None:
-            return self.resolved_references._meta.primary_key
-        elif isinstance(self.target_column, Column):
-            return self.resolved_references._meta.get_column_by_name(
-                self.target_column._meta.name
-            )
-        elif isinstance(self.target_column, str):
-            return self.resolved_references._meta.get_column_by_name(
-                self.target_column
-            )
-        else:
-            raise ValueError("Unable to resolve target_column.")
+        pass
 
     def copy(self) -> ForeignKeyMeta[ReferencedTable]:
         kwargs = self.__dict__.copy()
@@ -154,12 +118,7 @@ class ForeignKeyMeta(Generic[ReferencedTable]):
 
 @dataclass
 class ColumnMeta:
-    """
-    We store as many attributes in ColumnMeta as possible, to help avoid name
-    clashes with user defined attributes.
-    """
 
-    # General attributes:
     null: bool = False
     primary_key: bool = False
     unique: bool = False
@@ -171,39 +130,30 @@ class ColumnMeta:
     secret: bool = False
     auto_update: Any = ...
 
-    # Used for representing the table in migrations and the playground.
     params: dict[str, Any] = field(default_factory=dict)
 
-    ###########################################################################
 
-    # Lets you to map a column to a database column with a different name.
     _db_column_name: Optional[str] = None
 
     @property
     def db_column_name(self) -> str:
-        return self._db_column_name or self.name
+        pass
 
     @db_column_name.setter
     def db_column_name(self, value: str):
-        self._db_column_name = value
+        pass
 
-    ###########################################################################
 
-    # Set by the Table Metaclass:
     _name: Optional[str] = None
     _table: Optional[type[Table]] = None
 
     @property
     def name(self) -> str:
-        if not self._name:
-            raise ValueError(
-                "`_name` isn't defined - the Table Metaclass should set it."
-            )
-        return self._name
+        pass
 
     @name.setter
     def name(self, value: str):
-        self._name = value
+        pass
 
     @property
     def table(self) -> type[Table]:
@@ -217,20 +167,13 @@ class ColumnMeta:
     def table(self, value: type[Table]):
         self._table = value
 
-    ###########################################################################
 
-    # Used by Foreign Keys:
     call_chain: list["ForeignKey"] = field(default_factory=list)
 
-    ###########################################################################
 
     @property
     def engine_type(self) -> str:
-        engine = self.table._meta.db
-        if engine:
-            return engine.engine_type
-        else:
-            raise ValueError("The table has no engine defined.")
+        pass
 
     def get_choices_dict(self) -> Optional[dict[str, Any]]:
         """
@@ -255,7 +198,6 @@ class ColumnMeta:
 
         return output
 
-    ###########################################################################
 
     def get_default_alias(self):
         column_name = self.db_column_name
@@ -271,66 +213,15 @@ class ColumnMeta:
         return column_name
 
     def _get_path(self, include_quotes: bool = False):
-        column_name = self.db_column_name
-
-        if self.call_chain:
-            table_alias = self.call_chain[-1].table_alias
-            if include_quotes:
-                return f'"{table_alias}"."{column_name}"'
-            else:
-                return f"{table_alias}.{column_name}"
-        else:
-            if include_quotes:
-                return f'"{self.table._meta.tablename}"."{column_name}"'
-            else:
-                return f"{self.table._meta.tablename}.{column_name}"
+        pass
 
     def get_full_name(
         self,
         with_alias: bool = True,
         include_quotes: bool = True,
     ) -> str:
-        """
-        Returns the full column name, taking into account joins.
+        pass
 
-        :param with_alias:
-            Examples:
-
-            .. code-block python::
-
-                >>> Band.manager.name._meta.get_full_name(with_alias=False)
-                'band$manager.name'
-
-                >>> Band.manager.name._meta.get_full_name(with_alias=True)
-                'band$manager.name AS "manager.name"'
-
-        :param include_quotes:
-            If you're using the name in a SQL query, each component needs to be
-            surrounded by double quotes, in case the table or column name
-            clashes with a reserved SQL keyword (for example, a column called
-            ``order``).
-
-            .. code-block python::
-
-                >>> column._meta.get_full_name(include_quotes=True)
-                '"my_table_name"."my_column_name"'
-
-                >>> column._meta.get_full_name(include_quotes=False)
-                'my_table_name.my_column_name'
-
-        """
-        full_name = self._get_path(include_quotes=include_quotes)
-
-        if with_alias:
-            alias = self.get_default_alias()
-            if include_quotes:
-                full_name += f' AS "{alias}"'
-            else:
-                full_name += f" AS {alias}"
-
-        return full_name
-
-    ###########################################################################
 
     def copy(self) -> ColumnMeta:
         kwargs = self.__dict__.copy()
@@ -339,8 +230,6 @@ class ColumnMeta:
             call_chain=self.call_chain.copy(),
         )
 
-        # Make sure we don't accidentally include any other attributes which
-        # aren't supported by the constructor.
         field_names = [i.name for i in fields(self.__class__)]
         kwargs = {
             kwarg: value
@@ -362,10 +251,6 @@ class ColumnMeta:
 
 
 class ColumnKwargs(TypedDict, total=False):
-    """
-    Additional arguments which can be passed to :class:`Column` from
-    subclasses.
-    """
 
     null: bool
     primary_key: bool
@@ -381,103 +266,6 @@ class ColumnKwargs(TypedDict, total=False):
 
 
 class Column(Selectable):
-    """
-    All other columns inherit from ``Column``. Don't use it directly.
-
-    The following arguments apply to all column types:
-
-    :param null:
-        Whether the column is nullable.
-
-    :param primary_key:
-        If set, the column is used as a primary key.
-
-    :param default:
-        The column value to use if not specified by the user.
-
-    :param unique:
-        If set, a unique constraint will be added to the column.
-
-    :param index:
-        Whether an index is created for the column, which can improve
-        the speed of selects, but can slow down inserts.
-
-    :param index_method:
-        If index is set to ``True``, this specifies what type of index is
-        created.
-
-    :param required:
-        This isn't used by the database - it's to indicate to other tools that
-        the user must provide this value. Example uses are in serialisers for
-        API endpoints, and form fields.
-
-    :param help_text:
-        This provides some context about what the column is being used for. For
-        example, for a ``Decimal`` column called ``value``, it could say
-        ``'The units are millions of dollars'``. The database doesn't use this
-        value, but tools such as Piccolo Admin use it to show a tooltip in the
-        GUI.
-
-    :param choices:
-        An optional Enum - when specified, other tools such as Piccolo Admin
-        will render the available options in the GUI.
-
-    :param db_column_name:
-        If specified, you can override the name used for the column in the
-        database. The main reason for this is when using a legacy database,
-        with a problematic column name (for example ``'class'``, which is a
-        reserved Python keyword). Here's an example:
-
-        .. code-block:: python
-
-            class MyTable(Table):
-                class_ = Varchar(db_column_name="class")
-
-            >>> await MyTable.select(MyTable.class_)
-            [{'id': 1, 'class': 'test'}]
-
-        This is an advanced feature which you should only need in niche
-        situations.
-
-    :param secret:
-        If ``secret=True`` is specified, it allows a user to automatically
-        omit any fields when doing a select query, to help prevent
-        inadvertent leakage of sensitive data.
-
-        .. code-block:: python
-
-            class Band(Table):
-                name = Varchar()
-                net_worth = Integer(secret=True)
-
-            >>> await Band.select(exclude_secrets=True)
-            [{'name': 'Pythonistas'}]
-
-    :param auto_update:
-        Allows you to specify a value to set this column to each time it is
-        updated (via ``MyTable.update``, or ``MyTable.save`` on an existing
-        row). A common use case is having a ``modified_on`` column.
-
-        .. code-block:: python
-
-            class Band(Table):
-                name = Varchar()
-                popularity = Integer()
-                # The value can be a function or static value:
-                modified_on = Timestamp(auto_update=datetime.datetime.now)
-
-            # This will automatically set the `modified_on` column to the
-            # current timestamp, without having to explicitly set it:
-            >>> await Band.update({
-            ...     Band.popularity: Band.popularity + 100
-            ... }).where(Band.name == 'Pythonistas')
-
-        Note - this feature is implemented purely within the ORM. If you want
-        similar functionality on the database level (i.e. if you plan on using
-        raw SQL to perform updates), then you may be better off creating SQL
-        triggers instead.
-
-    """
 
     value_type: type = int
     default: Any
@@ -497,16 +285,9 @@ class Column(Selectable):
         auto_update: Any = ...,
         **kwargs,
     ) -> None:
-        # This is for backwards compatibility - originally the `primary_key`
-        # argument was called `primary`.
         if kwargs.get("primary") is True:
             primary_key = True
 
-        # Used for migrations.
-        # We deliberately omit 'required', 'auto_update' and 'help_text' as
-        # they don't effect the actual schema.
-        # 'choices' isn't used directly in the schema, but may be important
-        # for data migrations.
         kwargs.update(
             {
                 "null": null,
@@ -546,65 +327,12 @@ class Column(Selectable):
         allowed_types: Iterable[Union[None, type[Any]]],
         allow_recursion: bool = True,
     ) -> bool:
-        """
-        Make sure that the default value is of the allowed types.
-        """
-        if getattr(self, "_validated", None):
-            # If it has previously been validated by a subclass, don't
-            # validate again.
-            return True
-        elif (
-            default is None
-            and None in allowed_types
-            or type(default) in allowed_types
-        ):
-            self._validated = True
-            return True
-        elif callable(default):
-            # We need to prevent recursion, otherwise a function which returns
-            # a function would be an infinite loop.
-            if allow_recursion and self._validate_default(
-                default(), allowed_types=allowed_types, allow_recursion=False
-            ):
-                self._validated = True
-                return True
-        elif (
-            isinstance(default, Enum) and type(default.value) in allowed_types
-        ):
-            self._validated = True
-            return True
-
-        raise ValueError(
-            f"The default {default} isn't one of the permitted types - "
-            f"{allowed_types}"
-        )
+        pass
 
     def _validate_choices(
         self, choices: type[Enum], allowed_type: type[Any]
     ) -> bool:
-        """
-        Make sure the choices value has values of the allowed_type.
-        """
-        if getattr(self, "_validated_choices", None):
-            # If it has previously been validated by a subclass, don't
-            # validate again.
-            return True
-
-        for element in choices:
-            if isinstance(element.value, allowed_type):
-                continue
-            elif isinstance(element.value, Choice) and isinstance(
-                element.value.value, allowed_type
-            ):
-                continue
-            else:
-                raise ValueError(
-                    f"{element.name} doesn't have the correct type"
-                )
-
-        self._validated_choices = True
-
-        return True
+        pass
 
     def is_in(self, values: Union[Select, QueryString, list[Any]]) -> Where:
         from piccolo.query.methods.select import Select
@@ -643,39 +371,13 @@ class Column(Selectable):
         return Where(column=self, values=values, operator=NotIn)
 
     def like(self, value: str) -> Where:
-        """
-        Both SQLite and Postgres support LIKE, but they mean different things.
-
-        In Postgres, LIKE is case sensitive (i.e. 'foo' equals 'foo', but
-        'foo' doesn't equal 'Foo').
-
-        In SQLite, LIKE is case insensitive for ASCII characters
-        (i.e. 'foo' equals 'Foo'). But not for non-ASCII characters. To learn
-        more, see the docs:
-
-        https://sqlite.org/lang_expr.html#the_like_glob_regexp_and_match_operators
-
-        """
-        return Where(column=self, value=value, operator=Like)
+        pass
 
     def ilike(self, value: str) -> Where:
-        """
-        Only Postgres supports ILIKE. It's used for case insensitive matching.
-
-        For SQLite, it's just proxied to a LIKE query instead.
-
-        """
-        if self._meta.engine_type in ("postgres", "cockroach"):
-            operator: type[ComparisonOperator] = ILike
-        else:
-            colored_warning(
-                "SQLite doesn't support ILIKE, falling back to LIKE."
-            )
-            operator = Like
-        return Where(column=self, value=value, operator=operator)
+        pass
 
     def not_like(self, value: str) -> Where:
-        return Where(column=self, value=value, operator=NotLike)
+        pass
 
     def __or__(self, value) -> Coalesce:
         from piccolo.query.functions.conditional import Coalesce
@@ -768,18 +470,10 @@ class Column(Selectable):
         return hash(self._meta.name)
 
     def is_null(self) -> Where:
-        """
-        Can be used instead of ``MyTable.column == None``, because some linters
-        don't like a comparison to ``None``.
-        """
-        return Where(column=self, operator=IsNull)
+        pass
 
     def is_not_null(self) -> Where:
-        """
-        Can be used instead of ``MyTable.column != None``, because some linters
-        don't like a comparison to ``None``.
-        """
-        return Where(column=self, operator=IsNotNull)
+        pass
 
     def as_alias(self, name: str) -> Column:
         """
@@ -857,113 +551,17 @@ class Column(Selectable):
     def get_select_string(
         self, engine_type: str, with_alias: bool = True
     ) -> QueryString:
-        """
-        How to refer to this column in a SQL query, taking account of any joins
-        and aliases.
-        """
-
-        if with_alias:
-            if self._alias:
-                original_name = self._meta.get_full_name(
-                    with_alias=False,
-                )
-                return QueryString(f'{original_name} AS "{self._alias}"')
-            else:
-                return QueryString(
-                    self._meta.get_full_name(
-                        with_alias=True,
-                    )
-                )
-
-        return QueryString(
-            self._meta.get_full_name(
-                with_alias=False,
-            )
-        )
+        pass
 
     def get_where_string(self, engine_type: str) -> QueryString:
-        return self.get_select_string(
-            engine_type=engine_type, with_alias=False
-        )
+        pass
 
     def get_sql_value(
         self,
         value: Any,
         delimiter: str = "'",
     ) -> str:
-        """
-        When using DDL statements, we can't parameterise the values. An example
-        is when setting the default for a column. So we have to convert from
-        the Python type to a string representation which we can include in our
-        DDL statements.
-
-        :param value:
-            The Python value to convert to a string usable in a DDL statement
-            e.g. ``1``.
-        :param delimiter:
-            The string returned by this function is wrapped in delimiters,
-            ready to be added to a DDL statement. For example:
-            ``'hello world'``.
-        :returns:
-            The string usable in the DDL statement e.g. ``'1'``.
-
-        """
-        from piccolo.engine.sqlite import ADAPTERS as sqlite_adapters
-
-        # Common across all DB engines
-        if isinstance(value, Default):
-            return getattr(value, self._meta.engine_type)
-        elif value is None:
-            return "null"
-        elif isinstance(value, (float, decimal.Decimal)):
-            return str(value)
-        elif isinstance(value, str):
-            return f"{delimiter}{value}{delimiter}"
-        elif isinstance(value, bool):
-            return str(value).lower()
-        elif isinstance(value, bytes):
-            return f"{delimiter}{value.hex()}{delimiter}"
-
-        # SQLite specific
-        if self._meta.engine_type == "sqlite":
-            if adapter := sqlite_adapters.get(type(value)):
-                sqlite_value = adapter(value)
-                return (
-                    f"{delimiter}{sqlite_value}{delimiter}"
-                    if isinstance(sqlite_value, str)
-                    else sqlite_value
-                )
-
-        # Postgres and Cockroach
-        if self._meta.engine_type in ["postgres", "cockroach"]:
-            if isinstance(value, datetime.datetime):
-                return f"{delimiter}{value.isoformat().replace('T', ' ')}{delimiter}"  # noqa: E501
-            elif isinstance(value, datetime.date):
-                return f"{delimiter}{value.isoformat()}{delimiter}"
-            elif isinstance(value, datetime.time):
-                return f"{delimiter}{value.isoformat()}{delimiter}"
-            elif isinstance(value, datetime.timedelta):
-                interval = IntervalCustom.from_timedelta(value)
-                return getattr(interval, self._meta.engine_type)
-            elif isinstance(value, uuid.UUID):
-                return f"{delimiter}{value}{delimiter}"
-            elif isinstance(value, list):
-                # Convert to the array syntax.
-                return (
-                    delimiter
-                    + "{"
-                    + ",".join(
-                        self.get_sql_value(
-                            i,
-                            delimiter="" if isinstance(i, list) else '"',
-                        )
-                        for i in value
-                    )
-                    + "}"
-                    + delimiter
-                )
-
-        return str(value)
+        pass
 
     @property
     def column_type(self):
@@ -971,53 +569,11 @@ class Column(Selectable):
 
     @property
     def table_alias(self) -> str:
-        return "$".join(
-            f"{_key._meta.table._meta.tablename}${_key._meta.name}"
-            for _key in [*self._meta.call_chain, self]
-        )
+        pass
 
     @property
     def ddl(self) -> str:
-        """
-        Used when creating tables.
-        """
-        query = f'"{self._meta.db_column_name}" {self.column_type}'
-        if self._meta.primary_key:
-            query += " PRIMARY KEY"
-        if self._meta.unique:
-            query += " UNIQUE"
-        if not self._meta.null:
-            query += " NOT NULL"
-
-        foreign_key_meta = cast(
-            Optional[ForeignKeyMeta],
-            getattr(self, "_foreign_key_meta", None),
-        )
-        if foreign_key_meta:
-            references = foreign_key_meta.resolved_references
-            tablename = references._meta.get_formatted_tablename()
-            on_delete = foreign_key_meta.on_delete.value
-            on_update = foreign_key_meta.on_update.value
-            target_column_name = (
-                foreign_key_meta.resolved_target_column._meta.db_column_name
-            )
-            query += (
-                f' REFERENCES {tablename} ("{target_column_name}")'
-                f" ON DELETE {on_delete}"
-                f" ON UPDATE {on_update}"
-            )
-
-        # Always ran for Cockroach because unique_rowid() is directly
-        # defined for Cockroach Serial and BigSerial.
-        # Postgres and SQLite will not run this for Serial and BigSerial.
-        if self._meta.engine_type in (
-            "cockroach"
-        ) or self.__class__.__name__ not in ("Serial", "BigSerial"):
-            default = self.get_default_value()
-            sql_value = self.get_sql_value(value=default)
-            query += f" DEFAULT {sql_value}"
-
-        return query
+        pass
 
     def copy(self: Self) -> Self:
         column = copy.copy(self)

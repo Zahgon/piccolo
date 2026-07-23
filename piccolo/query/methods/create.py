@@ -11,9 +11,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Create(DDL):
-    """
-    Creates a database table.
-    """
 
     __slots__ = ("if_not_exists", "only_default_columns", "auto_create_schema")
 
@@ -45,47 +42,4 @@ class Create(DDL):
 
     @property
     def default_ddl(self) -> Sequence[str]:
-        ddl: list[str] = []
-
-        schema_name = self.table._meta.schema
-        if (
-            self.auto_create_schema
-            and schema_name is not None
-            and schema_name != "public"
-            and self.engine_type != "sqlite"
-        ):
-            from piccolo.schema import CreateSchema
-
-            ddl.append(
-                CreateSchema(
-                    schema_name=schema_name,
-                    if_not_exists=True,
-                    db=self.table._meta.db,
-                ).ddl
-            )
-
-        prefix = "CREATE TABLE"
-        if self.if_not_exists:
-            prefix += " IF NOT EXISTS"
-
-        if self.only_default_columns:
-            columns = self.table._meta.non_default_columns
-        else:
-            columns = self.table._meta.columns
-
-        base = f"{prefix} {self.table._meta.get_formatted_tablename()}"
-        columns_sql = ", ".join(i.ddl for i in columns)
-        ddl.append(f"{base} ({columns_sql})")
-
-        for column in columns:
-            if column._meta.index is True:
-                ddl.extend(
-                    CreateIndex(
-                        table=self.table,
-                        columns=[column],
-                        method=column._meta.index_method,
-                        if_not_exists=self.if_not_exists,
-                    ).ddl
-                )
-
-        return ddl
+        pass

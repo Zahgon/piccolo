@@ -12,11 +12,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class Readable(Selectable):
-    """
-    This allows a table to specify a 'readable' representation, which can be
-    used instead of the primary key in GUIs. See the 'get_readable' Table
-    method.
-    """
 
     template: str
     columns: Sequence[Column]
@@ -24,34 +19,24 @@ class Readable(Selectable):
 
     @property
     def _columns_string(self) -> str:
-        return ", ".join(
-            i._meta.get_full_name(with_alias=False) for i in self.columns
-        )
+        pass
 
     def _get_string(self, operator: str) -> QueryString:
-        return QueryString(
-            f"{operator}('{self.template}', {self._columns_string}) AS "
-            f"{self.output_name}"
-        )
+        pass
 
     @property
     def sqlite_string(self) -> QueryString:
-        return self._get_string(operator="PRINTF")
+        pass
 
     @property
     def postgres_string(self) -> QueryString:
-        return self._get_string(operator="FORMAT")
+        pass
 
     @property
     def cockroach_string(self) -> QueryString:
-        return self._get_string(operator="FORMAT")
+        pass
 
     def get_select_string(
         self, engine_type: str, with_alias=True
     ) -> QueryString:
-        try:
-            return getattr(self, f"{engine_type}_string")
-        except AttributeError as e:
-            raise ValueError(
-                f"Unrecognised engine_type - received {engine_type}"
-            ) from e
+        pass

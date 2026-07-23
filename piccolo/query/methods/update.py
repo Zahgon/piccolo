@@ -37,8 +37,6 @@ class Update(Query[TableInstance, list[Any]]):
         self.values_delegate = ValuesDelegate(table=table)
         self.where_delegate = WhereDelegate()
 
-    ###########################################################################
-    # Clauses
 
     def values(
         self,
@@ -59,7 +57,6 @@ class Update(Query[TableInstance, list[Any]]):
         self.returning_delegate.returning(columns)
         return self
 
-    ###########################################################################
 
     def _validate(self):
         """
@@ -83,36 +80,7 @@ class Update(Query[TableInstance, list[Any]]):
                 f"`{classname}.update`. Otherwise, add a where clause."
             )
 
-    ###########################################################################
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        columns_str = ", ".join(
-            f'"{col._meta.db_column_name}" = {{}}'
-            for col, _ in self.values_delegate._values.items()
-        )
-
-        query = f"UPDATE {self.table._meta.get_formatted_tablename()} SET {columns_str}"  # noqa: E501
-
-        querystring = QueryString(
-            query, *self.values_delegate.get_sql_values()
-        )
-
-        if self.where_delegate._where:
-            # The JOIN syntax isn't allowed in SQL UPDATE queries, so we need
-            # to write the WHERE clause differently, using a sub select.
-
-            querystring = QueryString(
-                "{} WHERE {}",
-                querystring,
-                self.where_delegate._where.querystring_for_update_and_delete,
-            )
-
-        if self.returning_delegate._returning:
-            querystring = QueryString(
-                "{}{}",
-                querystring,
-                self.returning_delegate._returning.querystring,
-            )
-
-        return [querystring]
+        pass

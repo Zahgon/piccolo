@@ -1,6 +1,3 @@
-"""
-A User model, used for authentication.
-"""
 
 from __future__ import annotations
 
@@ -20,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseUser(Table, tablename="piccolo_user"):
-    """
-    Provides a basic user, with authentication support.
-    """
 
     id: Serial
     username = Varchar(length=100, unique=True)
@@ -50,12 +44,9 @@ class BaseUser(Table, tablename="piccolo_user"):
 
     _min_password_length = 6
     _max_password_length = 128
-    # The number of hash iterations recommended by OWASP:
-    # https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
     _pbkdf2_iteration_count = 600_000
 
     def __init__(self, **kwargs):
-        # Generating passwords upfront is expensive, so might need reworking.
         password = kwargs.get("password", None)
         if password:
             if not password.startswith("pbkdf2_sha256"):
@@ -68,12 +59,8 @@ class BaseUser(Table, tablename="piccolo_user"):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        """
-        Used to get a readable string, representing a table row.
-        """
-        return Readable(template="%s", columns=[cls.username])
+        pass
 
-    ###########################################################################
 
     @classmethod
     def _validate_password(cls, password: str):
@@ -106,7 +93,6 @@ class BaseUser(Table, tablename="piccolo_user"):
             )
             raise ValueError("Do not pass a hashed password.")
 
-    ###########################################################################
 
     @classmethod
     def update_password_sync(cls, user: Union[str, int], password: str):
@@ -135,7 +121,6 @@ class BaseUser(Table, tablename="piccolo_user"):
         password = cls.hash_password(password)
         await cls.update({cls.password: password}).where(clause).run()
 
-    ###########################################################################
 
     @classmethod
     def hash_password(
@@ -178,75 +163,17 @@ class BaseUser(Table, tablename="piccolo_user"):
 
     @classmethod
     def split_stored_password(cls, password: str) -> list[str]:
-        elements = password.split("$")
-        if len(elements) != 4:
-            raise ValueError("Unable to split hashed password")
-        return elements
+        pass
 
-    ###########################################################################
 
     @classmethod
     def login_sync(cls, username: str, password: str) -> Optional[int]:
-        """
-        A sync equivalent of :meth:`login`.
-        """
-        return run_sync(cls.login(username, password))
+        pass
 
     @classmethod
     async def login(cls, username: str, password: str) -> Optional[int]:
-        """
-        Make sure the user exists and the password is valid. If so, the
-        ``last_login`` value is updated in the database.
+        pass
 
-        :returns:
-            The id of the user if a match is found, otherwise ``None``.
-
-        """
-        if (max_username_length := cls.username.length) and len(
-            username
-        ) > max_username_length:
-            logger.warning("Excessively long username provided.")
-            return None
-
-        if len(password) > cls._max_password_length:
-            logger.warning("Excessively long password provided.")
-            return None
-
-        response = (
-            await cls.select(cls._meta.primary_key, cls.password)
-            .where(cls.username == username)
-            .first()
-            .run()
-        )
-        if not response:
-            # No match found. We still call hash_password
-            # here to mitigate the ability to enumerate
-            # users via response timings
-            cls.hash_password(password)
-            return None
-
-        stored_password = response["password"]
-
-        algorithm, iterations_, salt, hashed = cls.split_stored_password(
-            stored_password
-        )
-        iterations = int(iterations_)
-
-        if cls.hash_password(password, salt, iterations) == stored_password:
-            # If the password was hashed in an earlier Piccolo version, update
-            # it so it's hashed with the currently recommended number of
-            # iterations:
-            if iterations != cls._pbkdf2_iteration_count:
-                await cls.update_password(username, password)
-
-            await cls.update({cls.last_login: datetime.datetime.now()}).where(
-                cls.username == username
-            )
-            return response["id"]
-        else:
-            return None
-
-    ###########################################################################
 
     @classmethod
     def create_user_sync(

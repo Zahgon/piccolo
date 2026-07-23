@@ -32,18 +32,7 @@ except ImportError:
 
 
 def pydantic_json_validator(value: Optional[str], required: bool = True):
-    if value is None:
-        if required:
-            raise ValueError("The JSON value wasn't provided.")
-        else:
-            return value
-
-    try:
-        load_json(value)
-    except json.JSONDecodeError as e:
-        raise ValueError("Unable to parse the JSON.") from e
-    else:
-        return value
+    pass
 
 
 def is_table_column(column: Column, table: type[Table]) -> bool:
@@ -56,7 +45,6 @@ def is_table_column(column: Column, table: type[Table]) -> bool:
         column._meta.call_chain
         and column._meta.call_chain[0]._meta.table is table
     ):
-        # We also allow the column if it's joined from the table.
         return True
     return False
 
@@ -200,7 +188,6 @@ def create_pydantic_model(
                     f"`include_columns` are invalid: {include_columns!r}"
                 )
 
-    ###########################################################################
 
     columns: dict[str, Any] = {}
     validators: dict[str, Callable] = {}
@@ -242,8 +229,6 @@ def create_pydantic_model(
 
         is_optional = True if all_optional else not column._meta.required
 
-        #######################################################################
-        # Work out the column type
 
         if isinstance(column, (JSON, JSONB)):
             if deserialize_json:
@@ -263,7 +248,6 @@ def create_pydantic_model(
 
         _type = Optional[value_type] if is_optional else value_type
 
-        #######################################################################
 
         params: dict[str, Any] = {}
         if is_optional:
@@ -322,8 +306,6 @@ def create_pydantic_model(
             if include_readable:
                 columns[f"{column_name}_readable"] = (str, None)
         else:
-            # This is used to tell Piccolo Admin that we want to display these
-            # values using a specific widget.
             if isinstance(column, Text):
                 extra["widget"] = "text-area"
             elif isinstance(column, (JSON, JSONB)):
@@ -331,8 +313,6 @@ def create_pydantic_model(
             elif isinstance(column, Timestamptz):
                 extra["widget"] = "timestamptz"
 
-            # It is useful for Piccolo API and Piccolo Admin to easily know
-            # how many dimensions the array has.
             if isinstance(column, Array):
                 extra["dimensions"] = column._get_dimensions()
 

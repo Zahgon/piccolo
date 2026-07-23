@@ -21,9 +21,6 @@ else:
 
 
 class Selectable(metaclass=ABCMeta):
-    """
-    Anything which inherits from this can be used in a select query.
-    """
 
     __slots__ = ("_alias",)
 
@@ -56,12 +53,6 @@ class Fragment:
 
 
 class QueryString(Selectable):
-    """
-    When we're composing complex queries, we're combining QueryStrings, rather
-    than concatenating strings directly. The reason for this is QueryStrings
-    keep the parameters separate, so we can pass parameterised queries to the
-    engine - which helps prevent SQL Injection attacks.
-    """
 
     __slots__ = (
         "template",
@@ -107,27 +98,7 @@ class QueryString(Selectable):
     def process_args(
         self, args: Sequence[Any]
     ) -> tuple[Sequence[Any], Sequence[Column]]:
-        """
-        If a Column is passed in, we convert it to the name of the column
-        (including joins).
-        """
-        from piccolo.columns import Column
-
-        processed_args = []
-        columns = []
-
-        for arg in args:
-            if isinstance(arg, Column):
-                columns.append(arg)
-                arg = QueryString(
-                    f"{arg._meta.get_full_name(with_alias=False)}"
-                )
-            elif isinstance(arg, QueryString):
-                columns.extend(arg.columns)
-
-            processed_args.append(arg)
-
-        return (processed_args, columns)
+        pass
 
     def as_alias(self, alias: str) -> QueryString:
         self._alias = alias
@@ -146,7 +117,6 @@ class QueryString(Selectable):
             for fragment in bundled
         )
 
-        # Do some basic type conversion here.
         converted_args = []
         for arg in combined_args:
             _type = type(arg)
@@ -170,7 +140,6 @@ class QueryString(Selectable):
         bundled: Optional[list[Fragment]] = None,
         combined_args: Optional[list] = None,
     ):
-        # Split up the string, separating by {}.
         fragments = [
             Fragment(prefix=i[0]) for i in Formatter().parse(self.template)
         ]
@@ -182,7 +151,6 @@ class QueryString(Selectable):
             try:
                 value = self.args[index]
             except IndexError:
-                # trailing element
                 fragment.no_arg = True
                 bundled.append(fragment)
             else:
@@ -235,27 +203,17 @@ class QueryString(Selectable):
         return (string, combined_args)
 
     def freeze(self, engine_type: str = "postgres"):
-        self._frozen_compiled_strings = self.compile_string(
-            engine_type=engine_type
-        )
+        pass
 
-    ###########################################################################
 
     def get_select_string(
         self, engine_type: str, with_alias: bool = True
     ) -> QueryString:
-        if with_alias and self._alias:
-            return QueryString("{} AS " + f'"{self._alias}"', self)
-        else:
-            return self
+        pass
 
     def get_where_string(self, engine_type: str) -> QueryString:
-        return self.get_select_string(
-            engine_type=engine_type, with_alias=False
-        )
+        pass
 
-    ###########################################################################
-    # Basic logic
 
     def __eq__(self, value) -> QueryString:  # type: ignore[override]
         if value is None:
@@ -270,10 +228,10 @@ class QueryString(Selectable):
             return QueryString("{} != {}", self, value)
 
     def eq(self, value) -> QueryString:
-        return self.__eq__(value)
+        pass
 
     def ne(self, value) -> QueryString:
-        return self.__ne__(value)
+        pass
 
     def __or__(self, value) -> QueryString:
         from piccolo.query.functions.conditional import Coalesce
@@ -317,15 +275,12 @@ class QueryString(Selectable):
         return QueryString("{} NOT IN {}", self, value)
 
     def like(self, value: str) -> QueryString:
-        return QueryString("{} LIKE {}", self, value)
+        pass
 
     def ilike(self, value: str) -> QueryString:
-        return QueryString("{} ILIKE {}", self, value)
+        pass
 
 
 class Unquoted(QueryString):
-    """
-    This is deprecated - just use QueryString directly.
-    """
 
     pass

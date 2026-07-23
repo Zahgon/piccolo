@@ -12,21 +12,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Refresh:
-    """
-    Used to refresh :class:`Table <piccolo.table.Table>` instances with the
-    latest data data from the database. Accessible via
-    :meth:`refresh <piccolo.table.Table.refresh>`.
-
-    :param instance:
-        The instance to refresh.
-    :param columns:
-        Which columns to refresh - it not specified, then all columns are
-        refreshed.
-    :param load_json:
-        Whether to load ``JSON`` / ``JSONB`` columns as objects, instead of
-        just a string.
-
-    """
 
     def __init__(
         self,
@@ -52,15 +37,7 @@ class Refresh:
 
     @property
     def _columns(self) -> Sequence[Column]:
-        """
-        Works out which columns the user wants to refresh.
-        """
-        if self.columns:
-            return self.columns
-
-        return [
-            i for i in self.instance._meta.columns if not i._meta.primary_key
-        ]
+        pass
 
     def _get_columns(self, instance: Table, columns: Sequence[Column]):
         """
@@ -91,8 +68,6 @@ class Refresh:
                 select_columns.extend(
                     self._get_columns(
                         child_instance,
-                        # Fetch all columns (even the primary key, just in
-                        # case the foreign key now references a different row).
                         column.all_columns(),
                     )
                 )
@@ -108,21 +83,12 @@ class Refresh:
         """
         for key, value in data_dict.items():
             if isinstance(value, dict) and not isinstance(value, JSONDict):
-                # If the value is a dict, then it's a child instance.
                 if all(i is None for i in value.values()):
-                    # If all values in the nested object are None, then we can
-                    # safely assume that the object itself is null, as the
-                    # primary key value must be null.
                     setattr(instance, key, None)
                 else:
                     self._update_instance(
                         getattr(
                             instance,
-                            # We have to do this just in case a column uses
-                            # db_column_name.
-                            # We should try and optimise this in the future to
-                            # minimise the overhead of searching for a matching
-                            # column.
                             instance._meta.get_column_by_name(
                                 key,
                                 match_db_column_name=True,
@@ -133,10 +99,6 @@ class Refresh:
             else:
                 setattr(
                     instance,
-                    # We have to do this just in case a column uses
-                    # db_column_name.
-                    # We should try and optimise this in the future to minimise
-                    # the overhead of searching for a matching column.
                     instance._meta.get_column_by_name(
                         key,
                         match_db_column_name=True,

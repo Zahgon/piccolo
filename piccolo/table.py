@@ -70,9 +70,6 @@ TABLE_REGISTRY: list[type[Table]] = []
 
 @dataclass
 class TableMeta:
-    """
-    This is used to store info about the table.
-    """
 
     tablename: str = ""
     columns: list[Column] = field(default_factory=list)
@@ -91,57 +88,24 @@ class TableMeta:
     m2m_relationships: list[M2M] = field(default_factory=list)
     schema: Optional[str] = None
 
-    # Records reverse foreign key relationships - i.e. when the current table
-    # is the target of a foreign key. Used by external libraries such as
-    # Piccolo API.
     _foreign_key_references: list[ForeignKey] = field(default_factory=list)
 
     def get_formatted_tablename(
         self, include_schema: bool = True, quoted: bool = True
     ) -> str:
-        """
-        Returns the tablename, in the desired format.
-
-        :param include_schema:
-            If ``True``, the Postgres schema is included. For example,
-            'my_schema.my_table'.
-        :param quote:
-            If ``True``, the name is wrapped in double quotes. For example,
-            '"my_schema"."my_table"'.
-
-        """
-        components = [self.tablename]
-        if include_schema and self.schema:
-            components.insert(0, self.schema)
-
-        if quoted:
-            return ".".join(f'"{i}"' for i in components)
-        else:
-            return ".".join(components)
+        pass
 
     @property
     def foreign_key_references(self) -> list[ForeignKey]:
-        foreign_keys: list[ForeignKey] = list(self._foreign_key_references)
-        lazy_column_references = LAZY_COLUMN_REFERENCES.for_tablename(
-            tablename=self.tablename
-        )
-        foreign_keys.extend(lazy_column_references)
-
-        return foreign_keys
+        pass
 
     @property
     def db(self) -> Engine:
-        if not self._db:
-            db = engine_finder()
-            if not db:
-                raise Exception("Unable to find the engine")
-            self._db = db
-
-        return self._db
+        pass
 
     @db.setter
     def db(self, value: Engine):
-        self._db = value
+        pass
 
     def refresh_db(self) -> None:
         engine = engine_finder()
@@ -237,12 +201,7 @@ class TableMetaclass(type):
 
 
 class Table(metaclass=TableMetaclass):
-    """
-    The class represents a database table. An instance represents a row.
-    """
 
-    # These are just placeholder values, so type inference isn't confused - the
-    # actual values are set in __init_subclass__.
     _meta = TableMeta()
 
     def __init_subclass__(
@@ -311,10 +270,6 @@ class Table(metaclass=TableMetaclass):
 
             attribute = getattr(cls, attribute_name)
             if isinstance(attribute, Column):
-                # We have to copy, then override the existing column
-                # definition, in case this column is inheritted from a mixin.
-                # Otherwise, when we set attributes on that column, it will
-                # effect all other users of that mixin.
                 column = attribute.copy()
                 setattr(cls, attribute_name, column)
 
@@ -378,8 +333,6 @@ class Table(metaclass=TableMetaclass):
         )
 
         for foreign_key_column in foreign_key_columns:
-            # ForeignKey columns require additional setup based on their
-            # parent Table.
             foreign_key_setup_response = foreign_key_column._setup(
                 table_class=cls
             )
@@ -430,8 +383,6 @@ class Table(metaclass=TableMetaclass):
 
         self._exists_in_db = _exists_in_db
 
-        # This is used by get_or_create to indicate to the user whether it
-        # was an existing row or not.
         self._was_created: Optional[bool] = None
 
         for column in self._meta.columns:
@@ -485,7 +436,6 @@ class Table(metaclass=TableMetaclass):
         """
         return cls(**data)
 
-    ###########################################################################
 
     def save(
         self, columns: Optional[Sequence[Union[Column, str]]] = None
@@ -509,11 +459,9 @@ class Table(metaclass=TableMetaclass):
         """
         cls = self.__class__
 
-        # New row - insert
         if not self._exists_in_db:
             return cls.insert(self).returning(cls._meta.primary_key)
 
-        # Pre-existing row - update
         if columns is None:
             column_instances = [
                 i for i in cls._meta.columns if not i._meta.primary_key
@@ -528,7 +476,6 @@ class Table(metaclass=TableMetaclass):
             i: getattr(self, i._meta.name, None) for i in column_instances
         }
 
-        # Assign any `auto_update` values
         if cls._meta.auto_update_columns:
             auto_update_values = cls._meta.get_auto_update_values()
             values.update(auto_update_values)
@@ -537,8 +484,6 @@ class Table(metaclass=TableMetaclass):
 
         return cls.update(
             values,  # type: ignore
-            # We've already included the `auto_update` columns, so no need
-            # to do it again:
             use_auto_update=False,
         ).where(
             cls._meta.primary_key
@@ -546,88 +491,17 @@ class Table(metaclass=TableMetaclass):
         )
 
     def update_self(self, values: dict[Union[Column, str], Any]) -> UpdateSelf:
-        """
-        This allows the user to update a single object - useful when the values
-        are derived from the database in some way.
-
-        For example, if we have the following table::
-
-            class Band(Table):
-                name = Varchar()
-                popularity = Integer()
-
-        And we fetch an object::
-
-            >>> band = await Band.objects().get(name="Pythonistas")
-
-        We could use the typical syntax for updating the object::
-
-            >>> band.popularity += 1
-            >>> await band.save()
-
-        The problem with this, is what if another object has already
-        incremented ``popularity``? It would overide the value.
-
-        Instead we can do this:
-
-            >>> await band.update_self({
-            ...     Band.popularity: Band.popularity + 1
-            ... })
-
-        This updates ``popularity`` in the database, and also sets the new
-        value for ``popularity`` on the object.
-
-        """
-        return UpdateSelf(row=self, values=values)
+        pass
 
     def remove(self) -> Delete:
-        """
-        A proxy to a delete query.
-        """
-        primary_key_value = getattr(self, self._meta.primary_key._meta.name)
-
-        if not primary_key_value:
-            raise ValueError("Can only delete pre-existing rows with a PK.")
-
-        setattr(self, self._meta.primary_key._meta.name, None)
-
-        self._exists_in_db = False
-
-        return self.__class__.delete().where(
-            self.__class__._meta.primary_key == primary_key_value
-        )
+        pass
 
     def refresh(
         self,
         columns: Optional[Sequence[Column]] = None,
         load_json: bool = False,
     ) -> Refresh:
-        """
-        Used to fetch the latest data for this instance from the database.
-        Modifies the instance in place, but also returns it as a convenience.
-
-        :param columns:
-            If you only want to refresh certain columns, specify them here.
-            Otherwise all columns are refreshed.
-
-        :param load_json:
-            Whether to load ``JSON`` / ``JSONB`` columns as objects, instead of
-            just a string.
-
-        Example usage::
-
-            # Get an instance from the database.
-            instance = await Band.objects.first()
-
-            # Later on we can refresh this instance with the latest data
-            # from the database, in case it has gotten stale.
-            await instance.refresh()
-
-            # Alternatively, running it synchronously:
-            instance.refresh().run_sync()
-
-        """
-        return Refresh(instance=self, columns=columns, load_json=load_json)
+        pass
 
     @overload
     def get_related(
@@ -640,45 +514,10 @@ class Table(metaclass=TableMetaclass):
     def get_related(
         self, foreign_key: Union[str, ForeignKey[ReferencedTable]]
     ) -> GetRelated[ReferencedTable]:
-        """
-        Used to fetch a ``Table`` instance, for the target of a foreign key.
-
-        .. code-block:: python
-
-            band = await Band.objects().first()
-            manager = await band.get_related(Band.manager)
-            >>> print(manager.name)
-            'Guido'
-
-        It can follow foreign keys multiple levels deep. For example,
-        ``Concert.band_1.manager``.
-
-        """
-        if isinstance(foreign_key, str):
-            column = self._meta.get_column_by_name(foreign_key)
-            if isinstance(column, ForeignKey):
-                foreign_key = column
-
-        if not isinstance(foreign_key, ForeignKey):
-            raise ValueError(
-                "foreign_key isn't a ForeignKey instance,  or the name of a "
-                "ForeignKey column."
-            )
-
-        return GetRelated(foreign_key=foreign_key, row=self)
+        pass
 
     def get_m2m(self, m2m: M2M) -> M2MGetRelated:
-        """
-        Get all matching rows via the join table.
-
-        .. code-block:: python
-
-            >>> band = await Band.objects().get(Band.name == "Pythonistas")
-            >>> await band.get_m2m(Band.genres)
-            [<Genre: 1>, <Genre: 2>]
-
-        """
-        return M2MGetRelated(row=self, m2m=m2m)
+        pass
 
     def add_m2m(
         self,
@@ -686,122 +525,13 @@ class Table(metaclass=TableMetaclass):
         m2m: M2M,
         extra_column_values: dict[Union[Column, str], Any] = {},
     ) -> M2MAddRelated:
-        """
-        Save the row if it doesn't already exist in the database, and insert
-        an entry into the joining table.
-
-        .. code-block:: python
-
-            >>> band = await Band.objects().get(Band.name == "Pythonistas")
-            >>> await band.add_m2m(
-            ...     Genre(name="Punk rock"),
-            ...     m2m=Band.genres
-            ... )
-            [{'id': 1}]
-
-        :param extra_column_values:
-            If the joining table has additional columns besides the two
-            required foreign keys, you can specify the values for those
-            additional columns. For example, if this is our joining table:
-
-            .. code-block:: python
-
-                class GenreToBand(Table):
-                    band = ForeignKey(Band)
-                    genre = ForeignKey(Genre)
-                    reason = Text()
-
-            We can provide the ``reason`` value:
-
-            .. code-block:: python
-
-                await band.add_m2m(
-                    Genre(name="Punk rock"),
-                    m2m=Band.genres,
-                    extra_column_values={
-                        "reason": "Their second album was very punk."
-                    }
-                )
-
-        """
-        return M2MAddRelated(
-            target_row=self,
-            rows=rows,
-            m2m=m2m,
-            extra_column_values=extra_column_values,
-        )
+        pass
 
     def remove_m2m(self, *rows: Table, m2m: M2M) -> M2MRemoveRelated:
-        """
-        Remove the rows from the joining table.
-
-        .. code-block:: python
-
-            >>> band = await Band.objects().get(Band.name == "Pythonistas")
-            >>> genre = await Genre.objects().get(Genre.name == "Rock")
-            >>> await band.remove_m2m(
-            ...     genre,
-            ...     m2m=Band.genres
-            ... )
-
-        """
-        return M2MRemoveRelated(
-            target_row=self,
-            rows=rows,
-            m2m=m2m,
-        )
+        pass
 
     def to_dict(self, *columns: Column) -> dict[str, Any]:
-        """
-        A convenience method which returns a dictionary, mapping column names
-        to values for this table instance.
-
-        .. code-block:: python
-
-            instance = await Manager.objects().get(
-                Manager.name == 'Guido'
-            )
-
-            >>> instance.to_dict()
-            {'id': 1, 'name': 'Guido'}
-
-        If the columns argument is provided, only those columns are included in
-        the output. It also works with column aliases.
-
-        .. code-block:: python
-
-            >>> instance.to_dict(Manager.id, Manager.name.as_alias('title'))
-            {'id': 1, 'title': 'Guido'}
-
-        """
-        # Make sure we're only looking at columns for the current table. If
-        # someone passes in a column for a sub table (for example
-        # `Band.manager.name`), we need to add `Band.manager` so the nested
-        # value appears in the output.
-        filtered_columns = []
-        for column in columns:
-            if column._meta.table == self.__class__:
-                filtered_columns.append(column)
-            else:
-                for parent_column in column._meta.call_chain:
-                    if parent_column._meta.table == self.__class__:
-                        filtered_columns.append(parent_column)
-                        break
-
-        alias_names = {
-            column._meta.name: column._alias for column in filtered_columns
-        }
-
-        output = {}
-        for column in filtered_columns if columns else self._meta.columns:
-            value = getattr(self, column._meta.name)
-            if isinstance(value, Table):
-                value = value.to_dict(*columns)
-
-            output[alias_names.get(column._meta.name) or column._meta.name] = (
-                value
-            )
-        return output
+        pass
 
     def __setitem__(self, key: str, value: Any):
         setattr(self, key, value)
@@ -809,56 +539,19 @@ class Table(metaclass=TableMetaclass):
     def __getitem__(self, key: str):
         return getattr(self, key)
 
-    ###########################################################################
 
     @classmethod
     def _get_related_readable(cls, column: ForeignKey) -> Readable:
-        """
-        Used for getting a readable from a foreign key.
-        """
-        readable: Readable = (
-            column._foreign_key_meta.resolved_references.get_readable()
-        )
-
-        output_columns = []
-
-        for readable_column in readable.columns:
-            output_column = column
-            for fk in readable_column._meta.call_chain:
-                output_column = getattr(output_column, fk._meta.name)
-            output_column = getattr(output_column, readable_column._meta.name)
-            output_columns.append(output_column)
-
-        output_name = f"{column._meta.name}_readable"
-
-        return Readable(
-            template=readable.template,
-            columns=output_columns,
-            output_name=output_name,
-        )
+        pass
 
     @classmethod
     def get_readable(cls) -> Readable:
-        """
-        Creates a readable representation of the row.
-        """
-        return Readable(template="%s", columns=[cls._meta.primary_key])
+        pass
 
-    ###########################################################################
 
     @property
     def querystring(self) -> QueryString:
-        """
-        Used when inserting rows.
-        """
-        args = [
-            convert_to_sql_value(value=self[column._meta.name], column=column)
-            for column in self._meta.columns
-        ]
-
-        # If unquoted, dump it straight into the query.
-        query = ",".join(["{}" for _ in args])
-        return QueryString(f"({query})", *args)
+        pass
 
     def __str__(self) -> str:
         return self.querystring.__str__()
@@ -896,14 +589,8 @@ class Table(metaclass=TableMetaclass):
 
         """
         if not isinstance(other, Table):
-            # This is the correct way to tell Python that this operation
-            # isn't supported:
-            # https://docs.python.org/3/library/constants.html#NotImplemented
             return NotImplemented
 
-        # Make sure we're comparing the same table.
-        # There are several ways we could do this (like comparing tablename),
-        # but this should be OK.
         if not isinstance(other, self.__class__):
             return False
 
@@ -919,11 +606,6 @@ class Table(metaclass=TableMetaclass):
             pk._meta.name,
         )
 
-        # Make sure the primary key values are of the correct type.
-        # We need this for `Serial` columns, which have a `QueryString`
-        # value until saved in the database. We don't want to use `==` on
-        # two QueryString values, because QueryString has a custom `__eq__`
-        # method which doesn't return a boolean.
         if isinstance(
             pk_value,
             pk.value_type,
@@ -933,62 +615,14 @@ class Table(metaclass=TableMetaclass):
         ):
             return pk_value == other_pk_value
         else:
-            # As a fallback, even if it hasn't been saved in the database,
-            # an object should still be equal to itself.
             return other is self
 
-    ###########################################################################
-    # Classmethods
 
     @classmethod
     def all_related(
         cls, exclude: Optional[list[Union[str, ForeignKey]]] = None
     ) -> list[ForeignKey]:
-        """
-        Used in conjunction with ``objects`` queries. Just as we can use
-        ``all_related`` on a ``ForeignKey``, you can also use it for the table
-        at the root of the query, which will return each related row as a
-        nested object. For example:
-
-        .. code-block:: python
-
-            concert = await Concert.objects(
-                Concert.all_related()
-            )
-
-            >>> concert.band_1
-            <Band: 1>
-            >>> concert.band_2
-            <Band: 2>
-            >>> concert.venue
-            <Venue: 1>
-
-        This is mostly useful when the table has a lot of foreign keys, and
-        typing them out by hand would be tedious. It's equivalent to:
-
-        .. code-block:: python
-
-            concert = await Concert.objects(
-                Concert.venue,
-                Concert.band_1,
-                Concert.band_2
-            )
-
-        :param exclude:
-            You can request all columns, except these.
-
-        """
-        if exclude is None:
-            exclude = []
-        excluded_column_names = [
-            i._meta.name if isinstance(i, ForeignKey) else i for i in exclude
-        ]
-
-        return [
-            i
-            for i in cls._meta.foreign_key_columns
-            if i._meta.name not in excluded_column_names
-        ]
+        pass
 
     @classmethod
     def all_columns(
@@ -1028,34 +662,7 @@ class Table(metaclass=TableMetaclass):
 
     @classmethod
     def ref(cls, column_name: str) -> Column:
-        """
-        Used to get a copy of a column from a table referenced by a
-        ``ForeignKey`` column. It's unlikely an end user of this library will
-        ever need to do this, but other libraries built on top of Piccolo may
-        need this functionality.
-
-        .. code-block:: python
-
-            Band.ref('manager.name')
-
-        """
-        local_column_name, reference_column_name = column_name.split(".")
-
-        local_column = cls._meta.get_column_by_name(local_column_name)
-
-        if not isinstance(local_column, ForeignKey):
-            raise ValueError(f"{local_column_name} isn't a ForeignKey")
-
-        referenced_table = local_column._foreign_key_meta.resolved_references
-        reference_column = referenced_table._meta.get_column_by_name(
-            reference_column_name
-        )
-
-        _reference_column = reference_column.copy()
-        _reference_column._meta.name = (
-            f"{local_column_name}.{reference_column_name}"
-        )
-        return _reference_column
+        pass
 
     @classmethod
     def insert(
@@ -1238,48 +845,7 @@ class Table(metaclass=TableMetaclass):
         column: Optional[Column] = None,
         distinct: Optional[Sequence[Column]] = None,
     ) -> Count:
-        """
-        Count the number of matching rows::
-
-            await Band.count().where(Band.popularity > 1000)
-
-        :param column:
-            If specified, just count rows where this column isn't null.
-
-        :param distinct:
-            Counts the number of distinct values for these columns. For
-            example, if we have a concerts table::
-
-                class Concert(Table):
-                    band = Varchar()
-                    start_date = Date()
-
-            With this data:
-
-            .. table::
-                :widths: auto
-
-                ===========  ==========
-                band         start_date
-                ===========  ==========
-                Pythonistas  2023-01-01
-                Pythonistas  2023-02-03
-                Rustaceans   2023-01-01
-                ===========  ==========
-
-            Without the ``distinct`` argument, we get the count of all
-            rows::
-
-                >>> await Concert.count()
-                3
-
-            To get the number of unique concert dates::
-
-                >>> await Concert.count(distinct=[Concert.start_date])
-                2
-
-        """
-        return Count(table=cls, column=column, distinct=distinct)
+        pass
 
     @classmethod
     def exists(cls) -> Exists:
@@ -1359,15 +925,7 @@ class Table(metaclass=TableMetaclass):
 
     @classmethod
     def indexes(cls) -> Indexes:
-        """
-        Returns a list of the indexes for this tables.
-
-        .. code-block:: python
-
-            await Band.indexes()
-
-        """
-        return Indexes(table=cls)
+        pass
 
     @classmethod
     def create_index(
@@ -1409,16 +967,11 @@ class Table(metaclass=TableMetaclass):
         """
         return DropIndex(table=cls, columns=columns, if_exists=if_exists)
 
-    ###########################################################################
 
     @classmethod
     def _get_index_name(cls, column_names: list[str]) -> str:
-        """
-        Generates an index name from the table name and column names.
-        """
-        return "_".join([cls._meta.tablename] + column_names)
+        pass
 
-    ###########################################################################
 
     @classmethod
     def _table_str(
@@ -1469,12 +1022,9 @@ class Table(metaclass=TableMetaclass):
                     continue
 
                 if abbreviated:
-                    # If the value is just the default one, don't include it.
                     if defaults.get(key, ...) == value:
                         continue
 
-                    # If db_column is the same as the column name then don't
-                    # include it - it does nothing.
                     if key == "db_column_name" and value == col._meta.name:
                         continue
 
@@ -1557,8 +1107,6 @@ def create_table_class(
     )
 
 
-###############################################################################
-# Quickly create or drop database tables from Piccolo `Table` classes.
 
 
 async def create_db_tables(
@@ -1635,8 +1183,6 @@ async def drop_db_tables(*tables: type[Table]) -> None:
         return
 
     if engine.engine_type == "sqlite":
-        # SQLite doesn't support CASCADE, so we have to drop them in the
-        # correct order.
         sorted_table_classes = reversed(sort_table_classes(list(tables)))
         ddl_statements = [
             Alter(table=table).drop_table(if_exists=True)
@@ -1679,7 +1225,6 @@ def drop_tables(*tables: type[Table]) -> None:
     return drop_db_tables_sync(*tables)
 
 
-###############################################################################
 
 
 def sort_table_classes(
@@ -1736,13 +1281,10 @@ def _get_graph(
             referenced_table = fk._foreign_key_meta.resolved_references
 
             if referenced_table._meta.tablename == table_class._meta.tablename:
-                # Most like a recursive link (using ForeignKey('self')).
                 continue
 
             dependents.add(referenced_table._meta.tablename)
 
-            # We also recursively check the related tables to get a fuller
-            # picture of the schema and relationships.
             if referenced_table._meta.tablename not in output:
                 output.update(
                     _get_graph(

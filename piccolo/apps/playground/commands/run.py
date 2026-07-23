@@ -1,7 +1,3 @@
-"""
-Populates a database with an example schema and data, and launches a shell
-for interacting with the data using Piccolo.
-"""
 
 import datetime
 import sys
@@ -43,10 +39,7 @@ class Manager(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s",
-            columns=[cls.name],
-        )
+        pass
 
 
 class Band(Table):
@@ -58,10 +51,7 @@ class Band(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s",
-            columns=[cls.name],
-        )
+        pass
 
 
 class FanClub(Table):
@@ -79,10 +69,7 @@ class Venue(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s",
-            columns=[cls.name],
-        )
+        pass
 
 
 class Concert(Table):
@@ -95,14 +82,7 @@ class Concert(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s and %s at %s",
-            columns=[
-                cls.band_1.name,
-                cls.band_2.name,
-                cls.venue.name,
-            ],
-        )
+        pass
 
 
 class Ticket(Table):
@@ -118,13 +98,7 @@ class Ticket(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s - %s",
-            columns=[
-                cls.concert._.venue._.name,
-                cls.ticket_type,
-            ],
-        )
+        pass
 
 
 class DiscountCode(Table):
@@ -134,10 +108,7 @@ class DiscountCode(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s - %s",
-            columns=[cls.code, cls.active],
-        )
+        pass
 
 
 class RecordingStudio(Table):
@@ -149,10 +120,7 @@ class RecordingStudio(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s",
-            columns=[cls.name],
-        )
+        pass
 
 
 class Album(Table):
@@ -165,10 +133,7 @@ class Album(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s - %s",
-            columns=[cls.name, cls.band._.name],
-        )
+        pass
 
 
 class Genre(Table):
@@ -178,10 +143,7 @@ class Genre(Table):
 
     @classmethod
     def get_readable(cls) -> Readable:
-        return Readable(
-            template="%s",
-            columns=[cls.name],
-        )
+        pass
 
 
 class GenreToBand(Table):
@@ -463,9 +425,6 @@ def run(
 
     if ipython_profile:
         print(colored_string("Using your IPython profile\n"))
-        # To try this out, set `c.TerminalInteractiveShell.colors = "Linux"`
-        # in `~/.ipython/profile_default/ipython_config.py` to set the terminal
-        # color.
         conf_args = {}
     else:
         conf_args = {"colors": "neutral"}

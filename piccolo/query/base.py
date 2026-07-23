@@ -40,11 +40,7 @@ class Query(Generic[TableInstance, QueryResponseType]):
 
     @property
     def engine_type(self) -> str:
-        engine = self.table._meta.db
-        if engine:
-            return engine.engine_type
-        else:
-            raise ValueError("Engine isn't defined.")
+        pass
 
     async def _process_results(self, results) -> QueryResponseType:
         raw = (
@@ -60,7 +56,6 @@ class Query(Generic[TableInstance, QueryResponseType]):
             self, "output_delegate", None
         )
 
-        #######################################################################
 
         if output and output._output.load_json:
             columns_delegate: Optional[ColumnsDelegate] = getattr(
@@ -101,7 +96,6 @@ class Query(Generic[TableInstance, QueryResponseType]):
 
             raw = processed_raw
 
-        #######################################################################
 
         raw = await self.response_handler(raw)
 
@@ -231,7 +225,6 @@ class Query(Generic[TableInstance, QueryResponseType]):
         """
         return response
 
-    ###########################################################################
 
     @property
     def sqlite_querystrings(self) -> Sequence[QueryString]:
@@ -251,98 +244,17 @@ class Query(Generic[TableInstance, QueryResponseType]):
 
     @property
     def querystrings(self) -> Sequence[QueryString]:
-        """
-        Calls the correct underlying method, depending on the current engine.
-        """
-        if self._frozen_querystrings is not None:
-            return self._frozen_querystrings
+        pass
 
-        engine_type = self.engine_type
-        if engine_type == "postgres":
-            try:
-                return self.postgres_querystrings
-            except NotImplementedError:
-                return self.default_querystrings
-        elif engine_type == "sqlite":
-            try:
-                return self.sqlite_querystrings
-            except NotImplementedError:
-                return self.default_querystrings
-        elif engine_type == "cockroach":
-            try:
-                return self.cockroach_querystrings
-            except NotImplementedError:
-                return self.default_querystrings
-        else:
-            raise Exception(
-                f"No querystring found for the {engine_type} engine."
-            )
-
-    ###########################################################################
 
     def freeze(self) -> FrozenQuery:
-        """
-        This is a performance optimisation when the same query is run
-        repeatedly. For example:
+        pass
 
-        .. code-block:: python
-
-            TOP_BANDS = Band.select(
-                Band.name
-            ).order_by(
-                Band.popularity,
-                ascending=False
-            ).limit(
-                10
-            ).output(
-                as_json=True
-            ).freeze()
-
-            # In the corresponding view/endpoint of whichever web framework
-            # you're using:
-            async def top_bands(self, request):
-                return await TOP_BANDS
-
-        It means that Piccolo doesn't have to work as hard each time the query
-        is run to generate the corresponding SQL - some of it is cached. If the
-        query is defined within the view/endpoint, it has to generate the SQL
-        from scratch each time.
-
-        Once a query is frozen, you can't apply any more clauses to it
-        (``where``, ``limit``, ``output`` etc).
-
-        Even though ``freeze`` helps with performance, there are limits to
-        how much it can help, as most of the time is still spent waiting for a
-        response from the database. However, for high throughput apps and data
-        science scripts, it's a worthwhile optimisation.
-
-        """
-        querystrings = self.querystrings
-        for querystring in querystrings:
-            querystring.freeze(engine_type=self.engine_type)
-
-        # Copy the query, so we don't store any references to the original.
-        query = self.__class__(
-            table=self.table, frozen_querystrings=querystrings
-        )
-
-        if hasattr(self, "limit_delegate"):
-            # Needed for `response_handler`
-            query.limit_delegate = self.limit_delegate.copy()  # type: ignore
-
-        if hasattr(self, "output_delegate"):
-            # Needed for `_process_results`
-            query.output_delegate = self.output_delegate.copy()  # type: ignore
-
-        return FrozenQuery(query=query)
-
-    ###########################################################################
 
     def __str__(self) -> str:
         return "; ".join([i.__str__() for i in self.querystrings])
 
 
-###############################################################################
 
 
 class FrozenQuery:
@@ -368,7 +280,6 @@ class FrozenQuery:
         return self.query.__str__()
 
 
-###############################################################################
 
 
 class DDL:
@@ -379,11 +290,7 @@ class DDL:
 
     @property
     def engine_type(self) -> str:
-        engine = self.table._meta.db
-        if engine:
-            return engine.engine_type
-        else:
-            raise ValueError("Engine isn't defined.")
+        pass
 
     @property
     def sqlite_ddl(self) -> Sequence[str]:
@@ -403,29 +310,7 @@ class DDL:
 
     @property
     def ddl(self) -> Sequence[str]:
-        """
-        Calls the correct underlying method, depending on the current engine.
-        """
-        engine_type = self.engine_type
-        if engine_type == "postgres":
-            try:
-                return self.postgres_ddl
-            except NotImplementedError:
-                return self.default_ddl
-        elif engine_type == "sqlite":
-            try:
-                return self.sqlite_ddl
-            except NotImplementedError:
-                return self.default_ddl
-        elif engine_type == "cockroach":
-            try:
-                return self.cockroach_ddl
-            except NotImplementedError:
-                return self.default_ddl
-        else:
-            raise Exception(
-                f"No querystring found for the {engine_type} engine."
-            )
+        pass
 
     def __await__(self):
         """

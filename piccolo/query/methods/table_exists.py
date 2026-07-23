@@ -16,30 +16,12 @@ class TableExists(Query[TableInstance, bool]):
 
     @property
     def sqlite_querystrings(self) -> Sequence[QueryString]:
-        return [
-            QueryString(
-                "SELECT EXISTS(SELECT * FROM sqlite_master WHERE "
-                "name = {}) AS 'exists'",
-                self.table._meta.tablename,
-            )
-        ]
+        pass
 
     @property
     def postgres_querystrings(self) -> Sequence[QueryString]:
-        subquery = QueryString(
-            "SELECT * FROM information_schema.tables WHERE table_name = {}",
-            self.table._meta.tablename,
-        )
-
-        if self.table._meta.schema:
-            subquery = QueryString(
-                "{} AND table_schema = {}", subquery, self.table._meta.schema
-            )
-
-        query = QueryString("SELECT EXISTS({})", subquery)
-
-        return [query]
+        pass
 
     @property
     def cockroach_querystrings(self) -> Sequence[QueryString]:
-        return self.postgres_querystrings
+        pass

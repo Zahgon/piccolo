@@ -30,35 +30,6 @@ def dump_json(data: Any, pretty: bool = False) -> str:
 
 
 class JSONDict(dict):
-    """
-    Once we have parsed a JSON string into a dictionary, we can't distinguish
-    it from other dictionaries.
-
-    Sometimes we might want to - for example::
-
-        >>> await Album.select(
-        ...     Album.all_columns(),
-        ...     Album.recording_studio.all_columns()
-        ... ).output(
-        ...     nested=True,
-        ...     load_json=True
-        ... )
-
-        [{
-            'id': 1,
-            'band': 1,
-            'name': 'Awesome album 1',
-            'recorded_at': {
-                'id': 1,
-                'facilities': {'restaurant': True, 'mixing_desk': True},
-                'name': 'Abbey Road'
-            },
-            'release_date': datetime.date(2021, 1, 1)
-        }]
-
-    Facilities could be mistaken for a table.
-
-    """
 
     ...
 

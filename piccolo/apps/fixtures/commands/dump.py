@@ -68,63 +68,8 @@ async def dump_to_json_string(
 
 
 def parse_args(apps: str, tables: str) -> list[FixtureConfig]:
-    """
-    Works out which apps and tables the user is referring to.
-    """
-    finder = Finder()
-    app_names = []
-
-    if apps == "all":
-        app_names = finder.get_sorted_app_names()
-    elif "," in apps:
-        app_names = apps.split(",")
-    else:
-        # Must be a single app name
-        app_names.append(apps)
-
-    table_class_names: Optional[list[str]] = None
-
-    if tables != "all":
-        table_class_names = tables.split(",") if "," in tables else [tables]
-    output: list[FixtureConfig] = []
-
-    for app_name in app_names:
-        app_config = finder.get_app_config(app_name=app_name)
-        table_classes = app_config.table_classes
-
-        if table_class_names is None:
-            fixture_configs = [i.__name__ for i in table_classes]
-        else:
-            fixture_configs = [
-                i.__name__
-                for i in table_classes
-                if i.__name__ in table_class_names
-            ]
-        output.append(
-            FixtureConfig(
-                app_name=app_name,
-                table_class_names=fixture_configs,
-            )
-        )
-
-    return output
+    pass
 
 
 async def dump(apps: str = "all", tables: str = "all"):
-    """
-    Serialises the data from the given Piccolo apps / tables, and prints it
-    out.
-
-    :param apps:
-        For all apps, specify `all`. For specific apps, pass in a comma
-        separated list e.g. `blog,profiles,billing`. For a single app, just
-        pass in the name of that app, e.g. `blog`.
-    :param tables:
-        For all tables, specify `all`. For specific tables, pass in a comma
-        separated list e.g. `Post,Tag`. For a single app, just
-        pass in the name of that app, e.g. `Post`.
-
-    """
-    fixture_configs = parse_args(apps=apps, tables=tables)
-    json_string = await dump_to_json_string(fixture_configs=fixture_configs)
-    print(json_string)
+    pass

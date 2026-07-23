@@ -1,6 +1,3 @@
-"""
-Credit to the Django Extensions team for inspiring this tool.
-"""
 
 import dataclasses
 import os

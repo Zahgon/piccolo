@@ -34,29 +34,17 @@ class RenameTableCollection:
 
     @property
     def old_class_names(self):
-        return [i.old_class_name for i in self.rename_tables]
+        pass
 
     @property
     def new_class_names(self):
-        return [i.new_class_name for i in self.rename_tables]
+        pass
 
     def was_renamed_from(self, old_class_name: str) -> bool:
-        """
-        Returns ``True`` if the given class name was renamed.
-        """
-        for rename_table in self.rename_tables:
-            if rename_table.old_class_name == old_class_name:
-                return True
-        return False
+        pass
 
     def renamed_from(self, new_class_name: str) -> Optional[str]:
-        """
-        Returns the old class name, if it exists.
-        """
-        rename = [
-            i for i in self.rename_tables if i.new_class_name == new_class_name
-        ]
-        return rename[0].old_class_name if rename else None
+        pass
 
 
 @dataclass
@@ -85,11 +73,11 @@ class RenameColumnCollection:
 
     @property
     def old_column_names(self):
-        return [i.old_column_name for i in self.rename_columns]
+        pass
 
     @property
     def new_column_names(self):
-        return [i.new_column_name for i in self.rename_columns]
+        pass
 
 
 @dataclass
@@ -107,22 +95,12 @@ class AlterStatements:
 
 @dataclass
 class SchemaDiffer:
-    """
-    Compares two lists of DiffableTables, and returns the list of alter
-    statements required to make them match. Asks for user input when it isn't
-    sure - for example, whether a column was renamed.
-    """
 
     schema: list[DiffableTable]
     schema_snapshot: list[DiffableTable]
 
-    # Sometimes the SchemaDiffer requires input from a user - for example,
-    # asking if a table was renamed or not. When running in non-interactive
-    # mode (like in a unittest), we can set a default to be used instead, like
-    # 'y'.
     auto_input: Optional[str] = None
 
-    ###########################################################################
 
     def __post_init__(self) -> None:
         self.schema_snapshot_map: dict[str, DiffableTable] = {
@@ -135,169 +113,14 @@ class SchemaDiffer:
         self.rename_columns_collection = self.check_renamed_columns()
 
     def check_rename_tables(self) -> RenameTableCollection:
-        """
-        Work out whether any of the tables were renamed.
-        """
-        drop_tables: list[DiffableTable] = list(
-            set(self.schema_snapshot) - set(self.schema)
-        )
-
-        new_tables: list[DiffableTable] = list(
-            set(self.schema) - set(self.schema_snapshot)
-        )
-
-        # A mapping of the old table name (i.e. dropped table) to the new
-        # table name.
-        collection = RenameTableCollection()
-
-        if len(drop_tables) == 0 or len(new_tables) == 0:
-            # There needs to be at least one dropped table and one created
-            # table for a rename to make sense.
-            return collection
-
-        # A renamed table should have at least one column remaining with the
-        # same name.
-        for new_table in new_tables:
-            new_column_names = [
-                i._meta.db_column_name for i in new_table.columns
-            ]
-            for drop_table in drop_tables:
-                if collection.was_renamed_from(
-                    old_class_name=drop_table.class_name
-                ):
-                    # We've already detected a table that was renamed from
-                    # this, so we can continue.
-                    # This can happen if we're renaming lots of tables in a
-                    # single migration.
-                    # https://github.com/piccolo-orm/piccolo/discussions/832
-                    continue
-
-                drop_column_names = [
-                    i._meta.db_column_name for i in new_table.columns
-                ]
-                same_column_names = set(new_column_names).intersection(
-                    drop_column_names
-                )
-                if len(same_column_names) > 0:
-                    if (
-                        drop_table.class_name == new_table.class_name
-                        and drop_table.tablename != new_table.tablename
-                    ):
-                        # The class names are the same, but the tablename
-                        # has changed - we can assume this is a deliberate
-                        # rename.
-                        collection.append(
-                            RenameTable(
-                                old_class_name=drop_table.class_name,
-                                old_tablename=drop_table.tablename,
-                                new_class_name=new_table.class_name,
-                                new_tablename=new_table.tablename,
-                                schema=new_table.schema,
-                            )
-                        )
-                        break
-
-                    user_response = (
-                        self.auto_input
-                        if self.auto_input
-                        else input(
-                            f"Did you rename {drop_table.class_name} "
-                            f"(tablename: {drop_table.tablename}) to "
-                            f"{new_table.class_name} "
-                            f"(tablename: {new_table.tablename})? (y/N)"
-                        )
-                    )
-                    if user_response.lower() == "y":
-                        collection.append(
-                            RenameTable(
-                                old_class_name=drop_table.class_name,
-                                old_tablename=drop_table.tablename,
-                                new_class_name=new_table.class_name,
-                                new_tablename=new_table.tablename,
-                                schema=new_table.schema,
-                            )
-                        )
-                        break
-
-        return collection
+        pass
 
     def check_table_schema_changes(self) -> ChangeTableSchemaCollection:
-        collection = ChangeTableSchemaCollection()
-
-        for table in self.schema:
-            snapshot_table = self.schema_snapshot_map.get(
-                table.class_name, None
-            )
-            if not snapshot_table:
-                continue
-
-            if table.schema != snapshot_table.schema:
-                collection.append(
-                    ChangeTableSchema(
-                        class_name=table.class_name,
-                        tablename=table.tablename,
-                        new_schema=table.schema,
-                        old_schema=snapshot_table.schema,
-                    )
-                )
-
-        return collection
+        pass
 
     def check_renamed_columns(self) -> RenameColumnCollection:
-        """
-        Work out whether any of the columns were renamed.
-        """
-        collection = RenameColumnCollection()
+        pass
 
-        for table in self.schema:
-            snapshot_table = self.schema_snapshot_map.get(
-                table.class_name, None
-            )
-            if not snapshot_table:
-                continue
-            delta: TableDelta = table - snapshot_table
-
-            if (not delta.add_columns) and (not delta.drop_columns):
-                continue
-
-            # Detecting renamed columns is really tricky.
-            # Even if a rename is detected, the column could also have changed
-            # type. For now, each time a column is added and removed from a
-            # table, ask if it's a rename.
-
-            # We track which dropped columns have already been identified by
-            # the user as renames, so we don't ask them if another column
-            # was also renamed from it.
-            used_drop_column_names: list[str] = []
-
-            for add_column in delta.add_columns:
-                for drop_column in delta.drop_columns:
-                    if drop_column.column_name in used_drop_column_names:
-                        continue
-
-                    user_response = self.auto_input or input(
-                        f"Did you rename the `{drop_column.db_column_name}` "  # noqa: E501
-                        f"column to `{add_column.db_column_name}` on the "
-                        f"`{add_column.table_class_name}` table? (y/N)"
-                    )
-                    if user_response.lower() == "y":
-                        used_drop_column_names.append(drop_column.column_name)
-                        collection.append(
-                            RenameColumn(
-                                table_class_name=add_column.table_class_name,
-                                tablename=drop_column.tablename,
-                                old_column_name=drop_column.column_name,
-                                new_column_name=add_column.column_name,
-                                old_db_column_name=drop_column.db_column_name,
-                                new_db_column_name=add_column.db_column_name,
-                                schema=add_column.schema,
-                            )
-                        )
-                        break
-
-        return collection
-
-    ###########################################################################
 
     def _stringify_func(
         self,
@@ -328,8 +151,6 @@ class SchemaDiffer:
 
         func_name = func.__name__
 
-        # This will raise an exception is we're missing parameters, which helps
-        # with debugging:
         bound = signature.bind(**serialised_params.params)
         bound.apply_defaults()
 
@@ -345,7 +166,6 @@ class SchemaDiffer:
             extra_imports=serialised_params.extra_imports,
         )
 
-    ###########################################################################
 
     @property
     def create_tables(self) -> AlterStatements:
@@ -353,7 +173,6 @@ class SchemaDiffer:
             set(self.schema) - set(self.schema_snapshot)
         )
 
-        # Remove any which are renames
         new_tables = [
             i
             for i in new_tables
@@ -384,7 +203,6 @@ class SchemaDiffer:
             set(self.schema_snapshot) - set(self.schema)
         )
 
-        # Remove any which are renames
         drop_tables = [
             i
             for i in drop_tables
@@ -411,276 +229,39 @@ class SchemaDiffer:
 
     @property
     def rename_tables(self) -> AlterStatements:
-        alter_statements = AlterStatements()
-
-        for i in self.rename_tables_collection.rename_tables:
-            alter_statements.extend(
-                self._stringify_func(
-                    func=MigrationManager.rename_table,
-                    params=i.__dict__,
-                    prefix="manager.",
-                )
-            )
-
-        return alter_statements
+        pass
 
     @property
     def change_table_schemas(self) -> AlterStatements:
-        alter_statements = AlterStatements()
+        pass
 
-        for i in self.table_schema_changes_collection.collection:
-            alter_statements.extend(
-                self._stringify_func(
-                    func=MigrationManager.change_table_schema,
-                    params=i.__dict__,
-                    prefix="manager.",
-                )
-            )
-
-        return alter_statements
-
-    ###########################################################################
 
     def _get_snapshot_table(
         self, table_class_name: str
     ) -> Optional[DiffableTable]:
-        snapshot_table = self.schema_snapshot_map.get(table_class_name, None)
-        if snapshot_table:
-            return snapshot_table
-        else:
-            if (
-                table_class_name
-                in self.rename_tables_collection.new_class_names
-            ):
-                class_name = self.rename_tables_collection.renamed_from(
-                    table_class_name
-                )
-                if class_name:
-                    snapshot_table = self.schema_snapshot_map.get(class_name)
-                    if snapshot_table:
-                        snapshot_table.class_name = table_class_name
-                        return snapshot_table
-        return None
+        pass
 
     @property
     def alter_columns(self) -> AlterStatements:
-        response: list[str] = []
-        extra_imports: list[Import] = []
-        extra_definitions: list[Definition] = []
-        for table in self.schema:
-            snapshot_table = self._get_snapshot_table(table.class_name)
-            if snapshot_table:
-                delta: TableDelta = table - snapshot_table
-            else:
-                continue
-
-            for alter_column in delta.alter_columns:
-                new_params = serialise_params(alter_column.params)
-                extra_imports.extend(new_params.extra_imports)
-                extra_definitions.extend(new_params.extra_definitions)
-
-                old_params = serialise_params(alter_column.old_params)
-                extra_imports.extend(old_params.extra_imports)
-                extra_definitions.extend(old_params.extra_definitions)
-
-                column_class = (
-                    alter_column.column_class.__name__
-                    if alter_column.column_class
-                    else "None"
-                )
-
-                old_column_class = (
-                    alter_column.old_column_class.__name__
-                    if alter_column.old_column_class
-                    else "None"
-                )
-
-                if alter_column.column_class is not None:
-                    extra_imports.append(
-                        Import(
-                            module=alter_column.column_class.__module__,
-                            target=alter_column.column_class.__name__,
-                            expect_conflict_with_global_name=getattr(
-                                UniqueGlobalNames,
-                                f"COLUMN_{alter_column.column_class.__name__.upper()}",  # noqa: E501
-                                None,
-                            ),
-                        )
-                    )
-
-                if alter_column.old_column_class is not None:
-                    extra_imports.append(
-                        Import(
-                            module=alter_column.old_column_class.__module__,
-                            target=alter_column.old_column_class.__name__,
-                            expect_conflict_with_global_name=getattr(
-                                UniqueGlobalNames,
-                                f"COLUMN_{alter_column.old_column_class.__name__.upper()}",  # noqa: E501
-                            ),
-                        )
-                    )
-
-                schema_str = (
-                    "None"
-                    if alter_column.schema is None
-                    else f'"{alter_column.schema}"'
-                )
-
-                response.append(
-                    f"manager.alter_column(table_class_name='{table.class_name}', tablename='{table.tablename}', column_name='{alter_column.column_name}', db_column_name='{alter_column.db_column_name}', params={new_params.params}, old_params={old_params.params}, column_class={column_class}, old_column_class={old_column_class}, schema={schema_str})"  # noqa: E501
-                )
-
-        return AlterStatements(
-            statements=response,
-            extra_imports=extra_imports,
-            extra_definitions=extra_definitions,
-        )
+        pass
 
     @property
     def drop_columns(self) -> AlterStatements:
-        response = []
-        for table in self.schema:
-            snapshot_table = self._get_snapshot_table(table.class_name)
-            if snapshot_table:
-                delta: TableDelta = table - snapshot_table
-            else:
-                continue
-
-            for column in delta.drop_columns:
-                if (
-                    column.column_name
-                    in self.rename_columns_collection.old_column_names
-                ):
-                    continue
-
-                schema_str = (
-                    "None" if column.schema is None else f'"{column.schema}"'
-                )
-
-                response.append(
-                    f"manager.drop_column(table_class_name='{table.class_name}', tablename='{table.tablename}', column_name='{column.column_name}', db_column_name='{column.db_column_name}', schema={schema_str})"  # noqa: E501
-                )
-        return AlterStatements(statements=response)
+        pass
 
     @property
     def add_columns(self) -> AlterStatements:
-        response: list[str] = []
-        extra_imports: list[Import] = []
-        extra_definitions: list[Definition] = []
-        for table in self.schema:
-            snapshot_table = self._get_snapshot_table(table.class_name)
-            if snapshot_table:
-                delta: TableDelta = table - snapshot_table
-            else:
-                continue
-
-            for add_column in delta.add_columns:
-                if (
-                    add_column.column_name
-                    in self.rename_columns_collection.new_column_names
-                ):
-                    continue
-
-                params = serialise_params(add_column.params)
-                cleaned_params = params.params
-                extra_imports.extend(params.extra_imports)
-                extra_definitions.extend(params.extra_definitions)
-
-                column_class = add_column.column_class
-                extra_imports.append(
-                    Import(
-                        module=column_class.__module__,
-                        target=column_class.__name__,
-                        expect_conflict_with_global_name=getattr(
-                            UniqueGlobalNames,
-                            f"COLUMN_{column_class.__name__.upper()}",
-                            None,
-                        ),
-                    )
-                )
-
-                schema_str = (
-                    "None"
-                    if add_column.schema is None
-                    else f'"{add_column.schema}"'
-                )
-
-                response.append(
-                    f"manager.add_column(table_class_name='{table.class_name}', tablename='{table.tablename}', column_name='{add_column.column_name}', db_column_name='{add_column.db_column_name}', column_class_name='{add_column.column_class_name}', column_class={column_class.__name__}, params={str(cleaned_params)}, schema={schema_str})"  # noqa: E501
-                )
-        return AlterStatements(
-            statements=response,
-            extra_imports=extra_imports,
-            extra_definitions=extra_definitions,
-        )
+        pass
 
     @property
     def rename_columns(self) -> AlterStatements:
-        alter_statements = AlterStatements()
+        pass
 
-        for i in self.rename_columns_collection.rename_columns:
-            alter_statements.extend(
-                self._stringify_func(
-                    func=MigrationManager.rename_column,
-                    params=i.__dict__,
-                    prefix="manager.",
-                )
-            )
-
-        return alter_statements
-
-    ###########################################################################
 
     @property
     def new_table_columns(self) -> AlterStatements:
-        new_tables: list[DiffableTable] = list(
-            set(self.schema) - set(self.schema_snapshot)
-        )
+        pass
 
-        response: list[str] = []
-        extra_imports: list[Import] = []
-        extra_definitions: list[Definition] = []
-        for table in new_tables:
-            if (
-                table.class_name
-                in self.rename_tables_collection.new_class_names
-            ):
-                continue
-
-            for column in table.columns:
-                # In case we cause subtle bugs:
-                params = deepcopy(column._meta.params)
-                _params = serialise_params(params)
-                cleaned_params = _params.params
-                extra_imports.extend(_params.extra_imports)
-                extra_definitions.extend(_params.extra_definitions)
-
-                extra_imports.append(
-                    Import(
-                        module=column.__class__.__module__,
-                        target=column.__class__.__name__,
-                        expect_conflict_with_global_name=getattr(
-                            UniqueGlobalNames,
-                            f"COLUMN_{column.__class__.__name__.upper()}",
-                            None,
-                        ),
-                    )
-                )
-
-                schema_str = (
-                    "None" if table.schema is None else f'"{table.schema}"'
-                )
-
-                response.append(
-                    f"manager.add_column(table_class_name='{table.class_name}', tablename='{table.tablename}', column_name='{column._meta.name}', db_column_name='{column._meta.db_column_name}', column_class_name='{column.__class__.__name__}', column_class={column.__class__.__name__}, params={str(cleaned_params)}, schema={schema_str})"  # noqa: E501
-                )
-        return AlterStatements(
-            statements=response,
-            extra_imports=extra_imports,
-            extra_definitions=extra_definitions,
-        )
-
-    ###########################################################################
 
     def get_alter_statements(self) -> list[AlterStatements]:
         """

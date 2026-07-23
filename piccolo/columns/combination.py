@@ -38,19 +38,11 @@ class Combination(CombinableMixin):
 
     @property
     def querystring(self) -> QueryString:
-        return QueryString(
-            "({} " + self.operator + " {})",
-            self.first.querystring,
-            self.second.querystring,
-        )
+        pass
 
     @property
     def querystring_for_update_and_delete(self) -> QueryString:
-        return QueryString(
-            "({} " + self.operator + " {})",
-            self.first.querystring_for_update_and_delete,
-            self.second.querystring_for_update_and_delete,
-        )
+        pass
 
     def __str__(self):
         return self.querystring.__str__()
@@ -132,7 +124,7 @@ class WhereRaw(CombinableMixin):
 
     @property
     def querystring_for_update_and_delete(self) -> QueryString:
-        return self.querystring
+        pass
 
     def __str__(self):
         return self.querystring.__str__()
@@ -164,93 +156,19 @@ class Where(CombinableMixin):
         self.operator = operator
 
     def clean_value(self, value: Any) -> Any:
-        """
-        If a where clause contains a ``Table`` instance, we should convert that
-        to a column reference. For example:
-
-        .. code-block:: python
-
-            manager = await Manager.objects.where(
-                Manager.name == 'Guido'
-            ).first()
-
-            # The where clause should be:
-            await Band.select().where(Band.manager.id == guido.id)
-            # Or
-            await Band.select().where(Band.manager == guido.id)
-
-            # If the object is passed in, i.e. `guido` instead of `guido.id`,
-            # it should still work.
-            await Band.select().where(Band.manager == guido)
-
-        Also, convert Enums to their underlying values, and serialise any JSON.
-
-        """
-        return convert_to_sql_value(value=value, column=self.column)
+        pass
 
     @property
     def values_querystring(self) -> QueryString:
-        values = self.values
-
-        if isinstance(values, QueryString):
-            return values
-
-        if isinstance(values, Undefined):
-            raise ValueError("values is undefined")
-
-        template = ", ".join("{}" for _ in values)
-        return QueryString(template, *values)
+        pass
 
     @property
     def querystring(self) -> QueryString:
-        args: list[Any] = []
-        if self.value != UNDEFINED:
-            args.append(self.value)
-
-        if self.values != UNDEFINED:
-            args.append(self.values_querystring)
-
-        template = self.operator.template.format(
-            name=self.column.get_where_string(
-                engine_type=self.column._meta.engine_type
-            ),
-            value="{}",
-            values="{}",
-        )
-
-        return QueryString(template, *args)
+        pass
 
     @property
     def querystring_for_update_and_delete(self) -> QueryString:
-        args: list[Any] = []
-        if self.value != UNDEFINED:
-            args.append(self.value)
-
-        if self.values != UNDEFINED:
-            args.append(self.values_querystring)
-
-        column = self.column
-
-        if column._meta.call_chain:
-            # Use a sub select to find the correct ID.
-            root_column = column._meta.call_chain[0]
-            sub_query = root_column._meta.table.select(root_column).where(self)
-
-            column_name = column._meta.call_chain[0]._meta.db_column_name
-            return QueryString(
-                f'"{column_name}" IN ({{}})',
-                sub_query.querystrings[0],
-            )
-        else:
-            template = self.operator.template.format(
-                name=self.column.get_where_string(
-                    engine_type=self.column._meta.engine_type
-                ),
-                value="{}",
-                values="{}",
-            )
-
-            return QueryString(template, *args)
+        pass
 
     def __str__(self):
         return self.querystring.__str__()

@@ -37,4 +37,4 @@ class Raw(Query):
 
     @property
     def default_querystrings(self) -> Sequence[QueryString]:
-        return [self.querystring]
+        pass

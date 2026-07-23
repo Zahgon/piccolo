@@ -50,12 +50,7 @@ class CreateSchema(SchemaDDLBase):
 
     @property
     def ddl(self) -> str:
-        query = "CREATE SCHEMA"
-        if self.if_not_exists:
-            query += " IF NOT EXISTS"
-        query += f' "{self.schema_name}"'
-
-        return query
+        pass
 
 
 class DropSchema(SchemaDDLBase):
@@ -74,15 +69,7 @@ class DropSchema(SchemaDDLBase):
 
     @property
     def ddl(self) -> str:
-        query = "DROP SCHEMA"
-        if self.if_exists:
-            query += " IF EXISTS"
-        query += f' "{self.schema_name}"'
-
-        if self.cascade:
-            query += " CASCADE"
-
-        return query
+        pass
 
 
 class RenameSchema(SchemaDDLBase):
@@ -98,10 +85,7 @@ class RenameSchema(SchemaDDLBase):
 
     @property
     def ddl(self):
-        return (
-            f'ALTER SCHEMA "{self.schema_name}" '
-            f'RENAME TO "{self.new_schema_name}"'
-        )
+        pass
 
 
 class MoveTable(SchemaDDLBase):
@@ -119,11 +103,7 @@ class MoveTable(SchemaDDLBase):
 
     @property
     def ddl(self):
-        table_name = f'"{self.table_name}"'
-        if self.current_schema:
-            table_name = f'"{self.current_schema}".{table_name}'
-
-        return f'ALTER TABLE {table_name} SET SCHEMA "{self.new_schema}"'
+        pass
 
 
 class ListTables:
@@ -219,49 +199,12 @@ class SchemaManager:
         if_exists: bool = True,
         cascade: bool = False,
     ) -> DropSchema:
-        """
-        Drops the specified schema::
-
-            >>> await SchemaManager().drop_schema(schema_name="music")
-
-        :param schema_name:
-            The name of the schema to drop.
-        :param if_exists:
-            No error will be raised if the schema doesn't exist.
-        :param cascade:
-            If ``True`` then it will automatically drop the tables within the
-            schema.
-
-        """
-        return DropSchema(
-            schema_name=schema_name,
-            if_exists=if_exists,
-            cascade=cascade,
-            db=self.db,
-        )
+        pass
 
     def rename_schema(
         self, schema_name: str, new_schema_name: str
     ) -> RenameSchema:
-        """
-        Rename the schema::
-
-            >>> await SchemaManager().rename_schema(
-            ...     schema_name="music",
-            ...     new_schema_name="music_info"
-            ... )
-
-        :param schema_name:
-            The current name of the schema.
-        :param new_schema_name:
-            What to rename the schema to.
-
-        """
-        return RenameSchema(
-            schema_name=schema_name,
-            new_schema_name=new_schema_name,
-            db=self.db,
-        )
+        pass
 
     def move_table(
         self,
@@ -293,24 +236,7 @@ class SchemaManager:
         )
 
     def list_tables(self, schema_name: str) -> ListTables:
-        """
-        Returns the name of each table in the given schema::
-
-            >>> await SchemaManager().list_tables(schema_name="music")
-            ['band', 'manager']
-
-        :param schema_name:
-            List the tables in this schema.
-
-        """
-        return ListTables(db=self.db, schema_name=schema_name)
+        pass
 
     def list_schemas(self) -> ListSchemas:
-        """
-        Returns the name of each schema in the database::
-
-            >>> await SchemaManager().list_schemas()
-            ['public', 'schema_1']
-
-        """
-        return ListSchemas(db=self.db)
+        pass

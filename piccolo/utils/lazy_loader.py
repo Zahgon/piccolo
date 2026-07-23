@@ -1,4 +1,3 @@
-# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/util/lazy_loader.py
 from __future__ import absolute_import, division, print_function
 
 import importlib
@@ -7,11 +6,6 @@ from typing import Any
 
 
 class LazyLoader(types.ModuleType):
-    """
-    Lazily import a module.
-
-    `PostgresEngine` and `SQLiteEngine` are example use cases.
-    """
 
     def __init__(self, local_name, parent_module_globals, name):
         self._local_name = local_name
@@ -20,33 +14,7 @@ class LazyLoader(types.ModuleType):
         super().__init__(name)
 
     def _load(self) -> types.ModuleType:
-        try:
-            # Import the target module and
-            # insert it into the parent's namespace
-            module = importlib.import_module(self.__name__)
-            self._parent_module_globals[self._local_name] = module
-
-            # Update this object's dict so that
-            # if someone keeps a reference to the
-            #   LazyLoader, lookups are efficient
-            #  (__getattr__ is only called on lookups that fail).
-            self.__dict__.update(module.__dict__)
-
-            return module
-
-        except ModuleNotFoundError as exc:
-            if str(exc) == "No module named 'asyncpg'":
-                raise ModuleNotFoundError(
-                    "PostgreSQL driver not found. "
-                    "Try running `pip install 'piccolo[postgres]'`"
-                ) from exc
-            elif str(exc) == "No module named 'aiosqlite'":
-                raise ModuleNotFoundError(
-                    "SQLite driver not found. "
-                    "Try running `pip install 'piccolo[sqlite]'`"
-                ) from exc
-            else:
-                raise exc from exc
+        pass
 
     def __getattr__(self, item) -> Any:
         module = self._load()

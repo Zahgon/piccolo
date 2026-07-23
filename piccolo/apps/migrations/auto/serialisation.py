@@ -21,7 +21,6 @@ from piccolo.utils.repr import repr_class_instance
 
 from .serialisation_legacy import deserialise_legacy_params
 
-###############################################################################
 
 
 class CanConflictWithGlobalNames(abc.ABC):
@@ -30,15 +29,6 @@ class CanConflictWithGlobalNames(abc.ABC):
 
 
 class UniqueGlobalNamesMeta(type):
-    """
-    Metaclass for ``UniqueGlobalNames``.
-
-    Fulfills the following functions:
-
-    - Assure that no two class attributes have the same value.
-    - Add class attributes `COLUMN_<capitalized column class name>`
-      to the class for each column type.
-    """
 
     def __new__(mcs, name, bases, class_attributes):
         class_attributes_with_columns = mcs.merge_class_attributes(
@@ -64,93 +54,31 @@ class UniqueGlobalNamesMeta(type):
     def get_unique_class_attribute_values(
         class_attributes: dict[str, Any],
     ) -> set[Any]:
-        """
-        Return class attribute values.
-
-        Raises an error if attribute values are not unique.
-        """
-
-        unique_attribute_values = set()
-        for attribute_name, attribute_value in class_attributes.items():
-            # Skip special attributes, i.e. "__<special attribute name>__"
-            if attribute_name.startswith("__") and attribute_name.endswith(
-                "__"
-            ):
-                continue
-
-            if attribute_value in unique_attribute_values:
-                raise ValueError(
-                    f"Duplicate unique global name {attribute_value}"
-                )
-            unique_attribute_values.add(attribute_value)
-
-        return unique_attribute_values
+        pass
 
     @staticmethod
     def merge_class_attributes(
         class_attributes1: dict[str, Any],
         class_attributes2: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Merges two class attribute dictionaries.
-
-        Raise an error if both dictionaries have an attribute
-        with the same name.
-        """
-
-        for attribute_name in class_attributes2:
-            if attribute_name in class_attributes1:
-                raise ValueError(f"Duplicate class attribute {attribute_name}")
-
-        return dict(**class_attributes1, **class_attributes2)
+        pass
 
     @staticmethod
     def get_column_class_attributes() -> dict[str, str]:
-        """Automatically generates global names for each column type."""
-
-        import piccolo.columns.column_types
-
-        class_attributes: dict[str, str] = {}
-        for module_global in piccolo.columns.column_types.__dict__.values():
-            try:
-                if module_global is not Column and issubclass(
-                    module_global, Column
-                ):
-                    class_attributes[
-                        f"COLUMN_{module_global.__name__.upper()}"
-                    ] = module_global.__name__
-            except TypeError:
-                pass
-
-        return class_attributes
+        pass
 
 
 class UniqueGlobalNames(metaclass=UniqueGlobalNamesMeta):
-    """
-    Contains global names that may be used during serialisation.
 
-    The global names are stored as class attributes. Names that may
-    occur in the global namespace after serialisation should be listed here.
-
-    This class is meant to prevent against the use of conflicting global
-    names. If possible imports and global definitions should use this
-    class to ensure that no conflicts arise during serialisation.
-    """
-
-    # Piccolo imports
     TABLE = Table.__name__
     DEFAULT = Default.__name__
-    # Column types are omitted because they are added by metaclass
 
-    # Standard library imports
     STD_LIB_ENUM = Enum.__name__
     STD_LIB_MODULE_DECIMAL = "decimal"
 
-    # Third-party library imports
     EXTERNAL_MODULE_UUID = "uuid"
     EXTERNAL_UUID = f"{EXTERNAL_MODULE_UUID}.{uuid.UUID.__name__}"
 
-    # This attribute is set in metaclass
     unique_names: set[str]
 
     @classmethod
@@ -187,7 +115,6 @@ class UniqueGlobalNameConflictWarning(UserWarning):
     pass
 
 
-###############################################################################
 
 
 @dataclass
@@ -239,8 +166,6 @@ class Definition(CanConflictWithGlobalNames, abc.ABC):
     @abc.abstractmethod
     def __repr__(self): ...
 
-    ###########################################################################
-    # To allow sorting:
 
     def __lt__(self, value):
         return self.__repr__() < value.__repr__()
@@ -262,14 +187,10 @@ class SerialisedParams:
     extra_definitions: list[Definition] = field(default_factory=list)
 
 
-###############################################################################
 
 
 def check_equality(self, other):
-    if getattr(other, "__hash__", None) is not None:
-        return self.__hash__() == other.__hash__()
-    else:
-        return False
+    pass
 
 
 @dataclass
@@ -363,8 +284,6 @@ class SerialisedTableType(Definition):
     def __repr__(self) -> str:
         tablename = self.table_type._meta.tablename
 
-        # We have to add the primary key column definition too, so foreign
-        # keys can be created with the correct type.
         pk_column = self.table_type._meta.primary_key
         pk_column_name = pk_column._meta.name
         serialised_pk_column = SerialisedColumnInstance(
@@ -372,16 +291,12 @@ class SerialisedTableType(Definition):
             serialised_params=serialise_params(params=pk_column._meta.params),
         )
 
-        #######################################################################
 
-        # When creating a ForeignKey, the user can specify a column other than
-        # the primary key to reference.
         serialised_target_columns: set[SerialisedColumnInstance] = set()
 
         for fk_column in self.table_type._meta._foreign_key_references:
             target_column = fk_column._foreign_key_meta.target_column
             if target_column is None:
-                # Just references the primary key
                 continue
             elif type(target_column) is str:
                 column = self.table_type._meta.get_column_by_name(
@@ -395,9 +310,6 @@ class SerialisedTableType(Definition):
                 raise ValueError("Unrecognised `target_column` value.")
 
             if column._meta.name == pk_column._meta.name:
-                # The target column is the foreign key, so no need to add
-                # it again.
-                # https://github.com/piccolo-orm/piccolo/issues/1197
                 continue
 
             serialised_target_columns.add(
@@ -409,7 +321,6 @@ class SerialisedTableType(Definition):
                 )
             )
 
-        #######################################################################
 
         schema_str = (
             "None"
@@ -433,7 +344,7 @@ class SerialisedTableType(Definition):
 
     @property
     def table_class_name(self) -> str:
-        return self.table_type.__name__
+        pass
 
     def warn_if_is_conflicting_with_global_name(self) -> None:
         UniqueGlobalNames.warn_if_is_conflicting_name(self.table_class_name)
@@ -519,7 +430,6 @@ class SerialisedDecimal:
         ).replace("'", '"')
 
 
-###############################################################################
 
 
 def serialise_params(
@@ -547,31 +457,22 @@ def serialise_params(
     extra_definitions: list[Definition] = []
 
     for key, value in params.items():
-        # Builtins, such as str, list and dict.
         if inspect.getmodule(value) == builtins:
             params[key] = SerialisedBuiltin(builtin=value)
             continue
 
-        # Column instances
         if isinstance(value, Column):
-            # For target_column (which is used by ForeignKey), we can just
-            # serialise it as the column name:
             if key == "target_column":
                 params[key] = value._meta.name
                 continue
 
-            ###################################################################
 
-            # For Array definitions, we want to serialise the full column
-            # definition:
 
             column: Column = value
             serialised_params: SerialisedParams = serialise_params(
                 params=column._meta.params
             )
 
-            # Include the extra imports and definitions required for the
-            # column params.
             extra_imports.extend(serialised_params.extra_imports)
             extra_definitions.extend(serialised_params.extra_definitions)
 
@@ -592,7 +493,6 @@ def serialise_params(
             )
             continue
 
-        # Class instances
         if isinstance(value, Default):
             params[key] = SerialisedClassInstance(instance=value)
             extra_imports.append(
@@ -604,11 +504,9 @@ def serialise_params(
             )
             continue
 
-        # Dates and times
         if isinstance(
             value, (datetime.time, datetime.datetime, datetime.date)
         ):
-            # Already has a good __repr__.
             extra_imports.append(
                 Import(
                     module=value.__class__.__module__,
@@ -617,7 +515,6 @@ def serialise_params(
             )
             continue
 
-        # UUIDs
         if isinstance(value, uuid.UUID):
             params[key] = SerialisedUUID(instance=value)
             extra_imports.append(
@@ -630,7 +527,6 @@ def serialise_params(
             )
             continue
 
-        # Decimals
         if isinstance(value, decimal.Decimal):
             params[key] = SerialisedDecimal(instance=value)
             extra_imports.append(
@@ -643,11 +539,8 @@ def serialise_params(
             )
             continue
 
-        # Enum instances
         if isinstance(value, Enum):
             if value.__module__.startswith("piccolo"):
-                # It's an Enum defined within Piccolo, so we can safely import
-                # it.
                 params[key] = SerialisedEnumInstance(instance=value)
                 extra_imports.append(
                     Import(
@@ -656,7 +549,6 @@ def serialise_params(
                     )
                 )
             else:
-                # It's a user defined Enum, so we'll insert the raw value.
                 enum_serialised_params: SerialisedParams = serialise_params(
                     params={key: value.value}
                 )
@@ -668,7 +560,6 @@ def serialise_params(
 
             continue
 
-        # Enum types
         if inspect.isclass(value) and issubclass(value, Enum):
             extra_imports.append(
                 Import(
@@ -697,7 +588,6 @@ def serialise_params(
                     SerialisedEnumTypeDefinition(enum_type=value)
                 )
 
-        # Functions
         if inspect.isfunction(value):
             if value.__name__ == "<lambda>":
                 raise ValueError("Lambdas can't be serialised")
@@ -708,8 +598,6 @@ def serialise_params(
             )
             continue
 
-        # Lazy imports - we need to resolve these now, in case the target
-        # table class gets deleted in the future.
         if isinstance(value, LazyTableReference):
             table_type = value.resolve()
             params[key] = SerialisedCallable(callable_=table_type)
@@ -723,9 +611,6 @@ def serialise_params(
                     expect_conflict_with_global_name=UniqueGlobalNames.TABLE,
                 )
             )
-            # also add missing primary key to extra_imports when creating a
-            # migration with a ForeignKey that uses a LazyTableReference
-            # https://github.com/piccolo-orm/piccolo/issues/865
             primary_key_class = table_type._meta.primary_key.__class__
             extra_imports.append(
                 Import(
@@ -740,7 +625,6 @@ def serialise_params(
             )
             continue
 
-        # Replace any Table class values into class and table names
         if inspect.isclass(value) and issubclass(value, Table):
             params[key] = SerialisedCallable(callable_=value)
             extra_definitions.append(SerialisedTableType(table_type=value))
@@ -764,8 +648,6 @@ def serialise_params(
                     ),
                 )
             )
-            # Include the extra imports and definitions required for the
-            # primary column params.
             pk_serialised_params: SerialisedParams = serialise_params(
                 params=value._meta.primary_key._meta.params
             )
@@ -774,7 +656,6 @@ def serialise_params(
 
             continue
 
-        # Plain class type
         if inspect.isclass(value) and not issubclass(value, Enum):
             params[key] = SerialisedCallable(callable_=value)
             extra_imports.append(
@@ -782,7 +663,6 @@ def serialise_params(
             )
             continue
 
-        # All other types can remain as is.
 
     unique_extra_imports = list(set(extra_imports))
     UniqueGlobalNames.warn_if_are_conflicting_objects(unique_extra_imports)
@@ -805,7 +685,6 @@ def deserialise_params(params: dict[str, Any]) -> dict[str, Any]:
     params = deepcopy(params)
 
     for key, value in params.items():
-        # This is purely for backwards compatibility.
         if isinstance(value, str) and not isinstance(value, Enum):
             if value != "self":
                 params[key] = deserialise_legacy_params(name=key, value=value)

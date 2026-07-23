@@ -11,39 +11,26 @@ from .timestamp import TimestampCustom, TimestampNow, TimestampOffset
 class TimestamptzOffset(TimestampOffset):
     @property
     def cockroach(self):
-        interval_string = self.get_postgres_interval_string(
-            ["days", "hours", "minutes", "seconds"]
-        )
-        return f"CURRENT_TIMESTAMP + INTERVAL '{interval_string}'"
+        pass
 
     def python(self):
-        return datetime.datetime.now(
-            tz=datetime.timezone.utc
-        ) + datetime.timedelta(
-            days=self.days,
-            hours=self.hours,
-            minutes=self.minutes,
-            seconds=self.seconds,
-        )
+        pass
 
 
 class TimestamptzNow(TimestampNow):
-    """
-    The current timestamp in UTC.
-    """
 
     @property
     def cockroach(self):
-        return "current_timestamp"
+        pass
 
     def python(self):
-        return datetime.datetime.now(tz=datetime.timezone.utc)
+        pass
 
 
 class TimestamptzCustom(TimestampCustom):
     @property
     def cockroach(self):
-        return "'{}'".format(self.datetime.isoformat().replace("T", " "))
+        pass
 
     @property
     def datetime(self):
@@ -60,17 +47,7 @@ class TimestamptzCustom(TimestampCustom):
 
     @classmethod
     def from_datetime(cls, instance: datetime.datetime):  # type: ignore
-        if instance.tzinfo is not None:
-            instance = instance.astimezone(datetime.timezone.utc)
-        return cls(
-            year=instance.year,
-            month=instance.month,
-            day=instance.day,
-            hour=instance.hour,
-            minute=instance.minute,
-            second=instance.second,
-            microsecond=instance.microsecond,
-        )
+        pass
 
 
 TimestamptzArg = Union[
